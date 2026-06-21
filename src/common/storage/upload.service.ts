@@ -37,16 +37,15 @@ export class UploadService {
   }
 
   //  Replace multiple
-  async replace(
-    oldImages: string[],
-    newFiles?: Express.Multer.File[],
-  ): Promise<string[]> {
-    if (!newFiles?.length) return oldImages;
+  async replace(oldImages: string[], newFiles?: Express.Multer.File[]) {
+  if (!newFiles?.length) return oldImages;
 
-    await this.deleteImages(oldImages);
+  const uploaded = await this.upload(newFiles);
 
-    return this.upload(newFiles);
-  }
+  await this.deleteImages(oldImages);
+
+  return uploaded;
+}
 
   //  Delete multiple
   async deleteImages(imageUrls: string[]) {

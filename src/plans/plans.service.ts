@@ -116,7 +116,7 @@ export class PlansService {
 
     const plan = await this.nutritionPlanModel
       .findByIdAndUpdate(id, dto, {
-        new: true,
+      returnDocument: 'after',
         runValidators: true,
       })
       .lean();

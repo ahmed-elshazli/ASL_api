@@ -14,6 +14,11 @@ import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 import { CacheInterceptor, CacheModule } from '@nestjs/cache-manager';
 import { PlansModule } from './plans/plans.module';
+import { ExercisesModule } from './exercises/exercises.module';
+import { TrainingProgramModule } from './training-program/training-program.module';
+import { UserTrainingProgramModule } from './user-training-program/user-training-program.module';
+import { UploadQueueModule } from './upload-queue/upload-queue.module';
+import { BullModule } from '@nestjs/bullmq';
 
 @Module({
   imports: [
@@ -52,12 +57,28 @@ import { PlansModule } from './plans/plans.module';
       isGlobal: true,
     }),
 
+  BullModule.forRoot({
+  connection: {
+    host: 'localhost',
+    port: 6379,
+  },
+}),
+
     AuthModule,
     UserModule,
   
     StorageModule,
   
     PlansModule,
+  
+    ExercisesModule,
+  
+    TrainingProgramModule,
+  
+    UserTrainingProgramModule,
+  
+  
+    UploadQueueModule,
   
   
  

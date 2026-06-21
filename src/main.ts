@@ -61,12 +61,15 @@ expressApp.set('trust proxy', 1);
   /**
    * CORS
    */
-  app.enableCors({
-    origin: process.env.FRONTEND_URL,
-    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
-    allowedHeaders: 'Content-Type, Accept, Authorization',
-    credentials: true,
-  });
+app.enableCors({
+  origin: [
+    process.env.WEBSITE_URL,
+    process.env.DASHBOARD_URL,
+  ],
+  methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE'],
+  allowedHeaders: ['Content-Type', 'Accept', 'Authorization'],
+  credentials: true,
+});
 
   const reflector = app.get(Reflector);
 
