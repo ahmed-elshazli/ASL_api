@@ -41,7 +41,7 @@ export class PlansService {
     return plan.toObject();
   }
 
-  // GET ALL
+
  
   async findAll(query: BuildQueryDto) {
     const baseQuery = this.nutritionPlanModel.find().lean();
@@ -50,8 +50,8 @@ export class PlansService {
       .filter()
       .search(['title', 'description']);
 
-    const filter = (baseQuery as any).getFilter?.() || {};
-    const total = await this.nutritionPlanModel.countDocuments(filter);
+  
+      const total = await features.count();
 
     features.sort().limitFields().paginate(total);
 

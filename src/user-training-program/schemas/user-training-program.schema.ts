@@ -1,46 +1,83 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { Types, HydratedDocument } from 'mongoose';
+import { HydratedDocument, Types } from 'mongoose';
+import { CompletedExercise, CompletedExerciseSchema } from './completed-exercise.schema';
 
 export type UserTrainingProgramDocument = HydratedDocument<UserTrainingProgram>;
 
-@Schema({ timestamps: true, versionKey: false })
+export enum UserProgramStatus {
+  ACTIVE = 'active',
+  COMPLETED = 'completed',
+  CANCELLED = 'cancelled',
+}
+
+@Schema({
+  timestamps: true,
+  versionKey: false,
+})
 export class UserTrainingProgram {
-  @Prop({ type: Types.ObjectId, ref: 'User', index: true, required: true })
+  @Prop({
+    type: Types.ObjectId,
+    ref: 'User',
+    required: true,
+    index: true,
+  })
   userId: Types.ObjectId;
 
   @Prop({
     type: Types.ObjectId,
     ref: 'TrainingProgram',
-    index: true,
     required: true,
+    index: true,
   })
   programId: Types.ObjectId;
 
-  @Prop({ default: true })
-  isActive: boolean;
+  @Prop({
+    type: String,
+    enum: UserProgramStatus,
+    default: UserProgramStatus.ACTIVE,
+    index: true,
+  })
+  status: UserProgramStatus;
 
-  
-  // progress system
-  @Prop({ default: 0, min: 0, max: 100 })
+  @Prop({
+    required: true,
+    min: 1,
+  })
+  totalExercises: number;
+
+  @Prop({
+    type: [CompletedExerciseSchema],
+    default: [],
+  })
+  completedExercises: CompletedExercise[];
+
+  @Prop({
+    default: 0,
+    min: 0,
+    max: 100,
+  })
   progress: number;
 
-  @Prop({ default: false })
-  isCompleted: boolean;
+  @Prop({
+    type: Date,
+  })
+  completedAt?: Date;
 
-  @Prop({ default: 0 })
-  completedSessions: number;
-
-  @Prop({ default: 0 })
-  totalSessions: number;
-
-  @Prop()
-  lastUpdatedAt: Date;
-
-  @Prop({ type: Date, default: () => new Date() })
-  assignedAt: Date;
+  @Prop({
+    type: Date,
+    default: () => new Date(),
+  })
+  startedAt: Date;
 }
 
 export const UserTrainingProgramSchema = SchemaFactory.createForClass(UserTrainingProgram);
 
-// Prevent duplicates
-UserTrainingProgramSchema.index({ userId: 1, programId: 1 }, { unique: true });
+UserTrainingProgramSchema.index({
+  userId: 1,
+  status: 1,
+});
+
+UserTrainingProgramSchema.index({
+  userId: 1,
+  programId: 1,
+});
