@@ -8,6 +8,7 @@ export enum UserProgramStatus {
   ACTIVE = 'active',
   COMPLETED = 'completed',
   CANCELLED = 'cancelled',
+  EXPIRED = 'expired',
 }
 
 @Schema({
@@ -19,7 +20,6 @@ export class UserTrainingProgram {
     type: Types.ObjectId,
     ref: 'User',
     required: true,
-    index: true,
   })
   userId: Types.ObjectId;
 
@@ -27,7 +27,6 @@ export class UserTrainingProgram {
     type: Types.ObjectId,
     ref: 'TrainingProgram',
     required: true,
-    index: true,
   })
   programId: Types.ObjectId;
 
@@ -58,6 +57,34 @@ export class UserTrainingProgram {
   })
   progress: number;
 
+ 
+
+  @Prop({
+    
+    min: 1,
+  })
+  durationInDays: number; 
+
+  @Prop({
+    required: true,
+    min: 1,
+    default: 1,
+  })
+  repeatCount: number; 
+
+  @Prop({
+    default: 0,
+    min: 0,
+  })
+  currentRound: number; 
+
+  @Prop({
+   
+  })
+  endDate: Date; // startedAt + durationInDays 
+
+ 
+
   @Prop({
     type: Date,
   })
@@ -72,12 +99,6 @@ export class UserTrainingProgram {
 
 export const UserTrainingProgramSchema = SchemaFactory.createForClass(UserTrainingProgram);
 
-UserTrainingProgramSchema.index({
-  userId: 1,
-  status: 1,
-});
-
-UserTrainingProgramSchema.index({
-  userId: 1,
-  programId: 1,
-});
+UserTrainingProgramSchema.index({ userId: 1, status: 1 });
+UserTrainingProgramSchema.index({ userId: 1, programId: 1 });
+UserTrainingProgramSchema.index({ endDate: 1, status: 1 }); //cron job 

@@ -15,6 +15,7 @@ import { User } from 'src/users/schema/users.schema';
 import { AssignProgramDto } from './dto/create-user-training-program.dto';
 import { BuildQueryDto } from 'src/common/dto/base-query.dto';
 import { ApiFeatures } from 'src/common/utils/api-features';
+import { CompleteExerciseDto } from './dto/complete-exercise.dto';
 
 @Injectable()
 export class UserTrainingProgramService {
@@ -30,7 +31,7 @@ export class UserTrainingProgramService {
   ) {}
 
   async assignProgram(dto: AssignProgramDto): Promise<UserTrainingProgram> {
-    const { userId, programId } = dto;
+    const { userId, programId, durationInDays, repeatCount } = dto;
 
     const user = await this.userModel.findById(userId);
     if (!user) throw new NotFoundException('User not found');
@@ -44,83 +45,117 @@ export class UserTrainingProgramService {
       status: UserProgramStatus.ACTIVE,
     });
 
-    if (existing) {
-      throw new BadRequestException('Program already active');
-    }
+    if (existing) throw new BadRequestException('Program already active');
+
+    const startedAt = new Date();
+    const endDate = new Date(startedAt);
+    endDate.setDate(endDate.getDate() + durationInDays);
 
     return await this.utpModel.create({
-      ...dto,
+      userId,
+      programId,
+      durationInDays,
+      repeatCount,
       totalExercises: program.exercises.length,
+      currentRound: 0,
+      startedAt,
+      endDate,
     });
   }
 
-  async findAll(query:BuildQueryDto){
+  async findAll(query: BuildQueryDto) {
+    const baseQuery = this.utpModel.find().lean();
 
-     const baseQuery = this.utpModel.find().lean();
-    
-        const features = new ApiFeatures(baseQuery, query)
-          .filter()
-          
-    
-        const total = await features.count();
-    
-        features.sort().limitFields().paginate(total);
-    
-        const data = await features.exec();
-    
-        return {
-          results: data.length,
-          pagination: features.paginationResult,
-          data,
-        };
+    const features = new ApiFeatures(baseQuery, query).filter();
+
+    const total = await features.count();
+
+    features.sort().limitFields().paginate(total);
+
+    const data = await features.exec();
+
+    return {
+      results: data.length,
+      pagination: features.paginationResult,
+      data,
+    };
   }
 
 async getUserPrograms(userId: string) {
-
-
   return this.utpModel
-    .find({ userId :new Types.ObjectId(userId)})
+    .find({ userId: new Types.ObjectId(userId) })
     .populate('programId')
+    .sort({ createdAt: -1 })
     .lean();
 }
-  // get all users assigned to a program
+
   async getProgramUsers(programId: string) {
+    if (!Types.ObjectId.isValid(programId)) {
+      throw new BadRequestException('Invalid programId');
+    }
 
-    
-
-  if (!Types.ObjectId.isValid(programId)) {
-    throw new BadRequestException('Invalid programId');
+    return this.utpModel.find({ programId }).populate('userId').sort({ createdAt: -1 }).lean();
   }
-    
-    return this.utpModel.find({ programId }).populate('userId').lean();
-  }
-
-
-
 
   async deleteUserProgram(userId: string, programId: string) {
-  const assignment = await this.utpModel.findOne({
-    userId,
-    programId,
-  });
+    const assignment = await this.utpModel.findOne({ userId, programId });
 
-  if (!assignment) {
-    throw new NotFoundException('Program assignment not found');
+    if (!assignment) throw new NotFoundException('Program assignment not found');
+
+    if (assignment.status === UserProgramStatus.COMPLETED) {
+      throw new BadRequestException('Cannot delete a completed program');
+    }
+
+    await this.utpModel.deleteOne({ _id: assignment._id });
+
+    return { message: 'Program removed successfully from user' };
   }
 
-  // optional safety: prevent deleting completed program
-  if (assignment.status === UserProgramStatus.COMPLETED) {
-    throw new BadRequestException(
-      'Cannot delete a completed program',
+  async completeExercise(programId: string, userId: string, dto: CompleteExerciseDto) {
+    const program = await this.utpModel.findOne({
+      _id: new Types.ObjectId(programId),
+      userId: new Types.ObjectId(userId),
+      status: UserProgramStatus.ACTIVE,
+    });
+
+    if (!program) throw new NotFoundException('Program not found or not active');
+
+    if (new Date() > program.endDate) {
+      program.status = UserProgramStatus.EXPIRED;
+      await program.save();
+      throw new BadRequestException('Program has expired');
+    }
+
+    const alreadyDone = program.completedExercises.some(
+      (e) => e.exerciseId.toString() === dto.exerciseId,
     );
+
+    if (alreadyDone) throw new BadRequestException('Exercise already completed');
+
+    program.completedExercises.push({
+      exerciseId: new Types.ObjectId(dto.exerciseId),
+      completedAt: new Date(),
+    });
+
+    const totalProgramExercises = program.totalExercises * program.repeatCount;
+    const completedSoFar =
+      program.currentRound * program.totalExercises +
+      program.completedExercises.length;
+
+    program.progress = totalProgramExercises > 0
+      ? Math.round((completedSoFar / totalProgramExercises) * 100)
+      : 0;
+
+    if (program.completedExercises.length === program.totalExercises) {
+      if (program.currentRound < program.repeatCount - 1) {
+        program.currentRound += 1;
+        program.completedExercises = [];
+      } else {
+        program.status = UserProgramStatus.COMPLETED;
+        program.completedAt = new Date();
+      }
+    }
+
+    return program.save();
   }
-
-  await this.utpModel.deleteOne({
-    _id: assignment._id,
-  });
-
-  return {
-    message: 'Program removed successfully from user',
-  };
-}
 }
