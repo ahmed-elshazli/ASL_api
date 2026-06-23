@@ -20,6 +20,7 @@ import { UserTrainingProgramModule } from './user-training-program/user-training
 import { UploadQueueModule } from './upload-queue/upload-queue.module';
 import { BullModule } from '@nestjs/bullmq';
 import { WeightLogModule } from './weight-log/weight-log.module';
+import { PatientDashboardModule } from './patient-dashboard/patient-dashboard.module';
 
 @Module({
   imports: [
@@ -83,6 +84,9 @@ import { WeightLogModule } from './weight-log/weight-log.module';
   
   
     WeightLogModule,
+  
+  
+    PatientDashboardModule,
   
   
  

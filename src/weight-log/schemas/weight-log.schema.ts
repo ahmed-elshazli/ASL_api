@@ -22,6 +22,8 @@ export class WeightLog {
     max: 300,
   })
   weight: number;
+  @Prop()
+   createdAt: Date;
 }
 
 export const WeightLogSchema =

@@ -20,6 +20,14 @@ export class UserResponseDto {
 
    @ApiProperty()
    isActive: boolean;
+ @ApiProperty()
+  gender: string;
+   @ApiProperty()
+  age: number;
+   @ApiProperty()
+   height: number;
+    @ApiProperty()
+    weight: number;
 
  
   @ApiProperty()
@@ -45,6 +53,10 @@ export class UserResponseDto {
     dto.createdAt = user.createdAt;
     dto.images = user.images || [];
     dto.country = user.country;
+    dto.age=user.age
+    dto.height=user.height
+    dto.gender=user.gender
+    dto.weight=user.weight
     
     dto.role = user.role;
 
