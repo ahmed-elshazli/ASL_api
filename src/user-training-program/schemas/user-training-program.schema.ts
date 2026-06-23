@@ -1,6 +1,9 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { HydratedDocument, Types } from 'mongoose';
-import { CompletedExercise, CompletedExerciseSchema } from './completed-exercise.schema';
+import {
+  CompletedExercise,
+  CompletedExerciseSchema,
+} from './completed-exercise.schema';
 
 export type UserTrainingProgramDocument = HydratedDocument<UserTrainingProgram>;
 
@@ -57,33 +60,26 @@ export class UserTrainingProgram {
   })
   progress: number;
 
- 
-
   @Prop({
-    
     min: 1,
   })
-  durationInDays: number; 
+  durationInDays: number;
 
   @Prop({
     required: true,
     min: 1,
     default: 1,
   })
-  repeatCount: number; 
+  repeatCount: number;
 
   @Prop({
     default: 0,
     min: 0,
   })
-  currentRound: number; 
+  currentRound: number;
 
-  @Prop({
-   
-  })
-  endDate: Date; // startedAt + durationInDays 
-
- 
+  @Prop({})
+  endDate: Date; // startedAt + durationInDays
 
   @Prop({
     type: Date,
@@ -97,8 +93,9 @@ export class UserTrainingProgram {
   startedAt: Date;
 }
 
-export const UserTrainingProgramSchema = SchemaFactory.createForClass(UserTrainingProgram);
+export const UserTrainingProgramSchema =
+  SchemaFactory.createForClass(UserTrainingProgram);
 
 UserTrainingProgramSchema.index({ userId: 1, status: 1 });
 UserTrainingProgramSchema.index({ userId: 1, programId: 1 });
-UserTrainingProgramSchema.index({ endDate: 1, status: 1 }); //cron job 
+UserTrainingProgramSchema.index({ endDate: 1, status: 1 }); //cron job

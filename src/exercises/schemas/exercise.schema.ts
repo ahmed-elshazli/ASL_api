@@ -9,7 +9,6 @@ export type ExerciseDocument = HydratedDocument<Exercise>;
   versionKey: false,
 })
 export class Exercise {
-
   @Prop({
     required: true,
     trim: true,
@@ -18,13 +17,11 @@ export class Exercise {
   })
   title: string;
 
-
   @Prop({
     trim: true,
     maxlength: 500,
   })
   description?: string;
-
 
   @Prop({
     required: true,
@@ -32,27 +29,17 @@ export class Exercise {
   })
   duration: number;
 
-
   @Prop({
     required: true,
     min: 0,
   })
   calories: number;
 
-@Prop({ default: 'pending' })
-uploadStatus: string;
+  @Prop({ default: 'pending' })
+  uploadStatus: string;
 
-
- 
-
-
-
-
-@Prop({ type: [String] })
-images: string[];
-
-
+  @Prop({ type: [String] })
+  images: string[];
 }
-
 
 export const ExerciseSchema = SchemaFactory.createForClass(Exercise);

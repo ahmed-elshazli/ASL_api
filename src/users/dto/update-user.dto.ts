@@ -2,11 +2,13 @@ import { ApiProperty } from '@nestjs/swagger';
 import {
   IsEmail,
   IsEnum,
+  IsNumber,
   IsOptional,
   IsString,
+  Max,
+  Min,
   MinLength,
 } from 'class-validator';
-import { UserRole } from 'src/users/enums/roles.enum';
 import { IsInternationalPhoneNumber } from 'src/common/validators/is-phone.validator';
 
 export class UpdateUserDto {
@@ -25,13 +27,9 @@ export class UpdateUserDto {
   @IsOptional()
   @IsEmail()
   email: string;
-  @IsOptional()
-  @IsEnum(UserRole)
-  role: UserRole;
 
   @ApiProperty({
     example: '+201001234567',
-   
   })
   @IsOptional()
   @IsString()
@@ -39,4 +37,27 @@ export class UpdateUserDto {
     message: 'Invalid phone number',
   })
   phone: string;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(30)
+  @Max(300)
+  weight: number;
+  @IsOptional()
+  @IsNumber()
+  @Min(50)
+  @Max(250)
+  height: number;
+  @IsOptional()
+  @IsNumber()
+  @Min(10)
+  @Max(120)
+  age: number;
+  @IsOptional()
+  @IsEnum(['male', 'female'])
+  gender: string;
+
+  @IsOptional()
+  @IsString()
+  country: string;
 }

@@ -2,7 +2,10 @@ import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { HydratedDocument } from 'mongoose';
 import { ProgramCategory } from '../enums/program-category.enum';
 import { ProgramLevel } from '../enums/program-level.enum';
-import { ProgramExercise, ProgramExerciseSchema } from './program-exercise.schema';
+import {
+  ProgramExercise,
+  ProgramExerciseSchema,
+} from './program-exercise.schema';
 
 export type TrainingProgramDocument = HydratedDocument<TrainingProgram>;
 
@@ -42,7 +45,7 @@ export class TrainingProgram {
   })
   level: ProgramLevel;
 
- @Prop({ type: [ProgramExerciseSchema], default: [] })
+  @Prop({ type: [ProgramExerciseSchema], default: [] })
   exercises: ProgramExercise[];
 
   @Prop({
@@ -74,11 +77,10 @@ export class TrainingProgram {
     index: true,
   })
   isActive: boolean;
-
-
 }
 
-export const TrainingProgramSchema =SchemaFactory.createForClass(TrainingProgram);
+export const TrainingProgramSchema =
+  SchemaFactory.createForClass(TrainingProgram);
 
 TrainingProgramSchema.index({
   category: 1,

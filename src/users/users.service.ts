@@ -19,6 +19,7 @@ import { UploadService } from 'src/common/storage/upload.service';
 import { generateTokens } from 'src/common/utils/generate-token';
 import { ConfigService } from '@nestjs/config';
 import { AuthResponseDto } from './dto/response.dto';
+import { WeightLogService } from 'src/weight-log/weight-log.service';
 
 @Injectable()
 export class UsersService {
@@ -28,6 +29,7 @@ export class UsersService {
     private readonly imageService: UploadService,
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
+     private readonly weightLogService: WeightLogService,
   ) {}
 
   async create(
@@ -41,9 +43,13 @@ export class UsersService {
 
 
     const user = await this.usersRepository.create(dto);
+    await this.weightLogService.create(
+  user._id.toString(),
+  user.weight,
+);
   
 
-    // 3. Generate tokens
+    // 3.Generate tokens
     const tokens = await generateTokens(
       user._id.toString(),
       user.role,
@@ -103,6 +109,16 @@ export class UsersService {
     if (files?.length) {
       dto['images'] = await this.imageService.replace(user.images, files);
     }
+
+    if (
+  dto.weight !== undefined &&
+  dto.weight !== user.weight
+) {
+  await this.weightLogService.create(
+    user._id.toString(),
+    dto.weight,
+  );
+}
 
     const updated = await this.usersRepository.updateById(
       user._id.toString(),
