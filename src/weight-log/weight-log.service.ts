@@ -1,80 +1,82 @@
-import { Injectable } from '@nestjs/common';
-
+import { Injectable, BadRequestException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { WeightLog } from './schemas/weight-log.schema';
 import { Model, Types } from 'mongoose';
+
+import { WeightLog, WeightLogDocument } from './schemas/weight-log.schema';
 
 @Injectable()
 export class WeightLogService {
   constructor(
     @InjectModel(WeightLog.name)
-    private readonly weightLogModel: Model<WeightLog>,
+    private readonly weightLogModel: Model<WeightLogDocument>,
   ) {}
 
-  async create(userId: string, weight:number): Promise<WeightLog> {
-    return await this.weightLogModel.create({
-      userId,
-      weight,
-    });
+  private toObjectId(id: string): Types.ObjectId {
+    if (!Types.ObjectId.isValid(id)) {
+      throw new BadRequestException('Invalid user id');
+    }
+
+    return new Types.ObjectId(id);
   }
 
-  async getWeightHistory(
-  userId: string,
-) {
-  return await this.weightLogModel
-    .find({
-      userId: new Types.ObjectId(userId),
-    })
-    .sort({ createdAt: 1 })
-    .select('weight createdAt')
-    .lean();
-}
+  async create(userId: string, weight: number): Promise<WeightLogDocument> {
+    return await this.weightLogModel.create({
+      userId: this.toObjectId(userId),
+      weight,
+    });
+
+  
+
+  }
+
+  async getWeightHistory(userId: string) {
+    const logs = await this.weightLogModel
+      .find({
+        userId: new Types.ObjectId(userId),
+      })
+      .lean();
 
 
-async getLatestWeight(
-  userId: string,
-) {
-  return await this.weightLogModel
-    .findOne({
-      userId: new Types.ObjectId(userId),
-    })
-    .sort({ createdAt: -1 })
-    .lean();
-}
 
-async getInitialWeight(
-  userId: string,
-) {
-  return await this.weightLogModel
-    .findOne({
-      userId: new Types.ObjectId(userId),
-    })
-    .sort({ createdAt: 1 })
-    .lean();
-}
+    return logs;
+  }
 
-async getWeightStatistics(
-  userId: string,
-) {
-  const [firstWeight, latestWeight] =
-    await Promise.all([
+  async getLatestWeight(userId: string) {
+    return this.weightLogModel
+      .findOne({
+        userId: this.toObjectId(userId),
+      })
+      .sort({ createdAt: -1 })
+      .lean();
+  }
+
+  async getInitialWeight(userId: string) {
+    return this.weightLogModel
+      .findOne({
+        userId: this.toObjectId(userId),
+      })
+      .sort({ createdAt: 1 })
+      .lean();
+  }
+
+  async getWeightStatistics(userId: string) {
+    const [firstWeight, latestWeight] = await Promise.all([
       this.getInitialWeight(userId),
       this.getLatestWeight(userId),
     ]);
 
-  if (!firstWeight || !latestWeight) {
+    if (!firstWeight || !latestWeight) {
+      return {
+        initialWeight: null,
+        currentWeight: null,
+        weightLost: 0,
+      };
+    }
+
     return {
-      initialWeight: null,
-      currentWeight: null,
-      weightLost: 0,
+      initialWeight: firstWeight.weight,
+      currentWeight: latestWeight.weight,
+      weightLost: Number(firstWeight.weight) - Number(latestWeight.weight),
     };
   }
-
-  return {
-    initialWeight: firstWeight.weight,
-    currentWeight: latestWeight.weight,
-    weightLost:
-      firstWeight.weight - latestWeight.weight,
-  };
-}
 }

@@ -111,51 +111,86 @@ async getUserPrograms(userId: string) {
     return { message: 'Program removed successfully from user' };
   }
 
-  async completeExercise(programId: string, userId: string, dto: CompleteExerciseDto) {
-    const program = await this.utpModel.findOne({
-      _id: new Types.ObjectId(programId),
-      userId: new Types.ObjectId(userId),
-      status: UserProgramStatus.ACTIVE,
-    });
+async completeExercise(
+  programId: string,
+  userId: string,
+  dto: CompleteExerciseDto,
+) {
+  const program = await this.utpModel.findOne({
+    _id: new Types.ObjectId(programId),
+    userId: new Types.ObjectId(userId),
+    status: UserProgramStatus.ACTIVE,
+  });
 
-    if (!program) throw new NotFoundException('Program not found or not active');
+  if (!program)
+    throw new NotFoundException('Program not found or not active');
 
-    if (new Date() > program.endDate) {
-      program.status = UserProgramStatus.EXPIRED;
-      await program.save();
-      throw new BadRequestException('Program has expired');
-    }
+  //  Expiry check
+  if (new Date() > program.endDate) {
+    program.status = UserProgramStatus.EXPIRED;
+    await program.save();
+    throw new BadRequestException('Program has expired');
+  }
 
-    const alreadyDone = program.completedExercises.some(
-      (e) => e.exerciseId.toString() === dto.exerciseId,
-    );
+  //  prevent duplicate completion
+  const alreadyDone = program.completedExercises.some(
+    (e) => e.exerciseId.toString() === dto.exerciseId,
+  );
 
-    if (alreadyDone) throw new BadRequestException('Exercise already completed');
+  if (alreadyDone) {
+    throw new BadRequestException('Exercise already completed');
+  }
 
-    program.completedExercises.push({
-      exerciseId: new Types.ObjectId(dto.exerciseId),
-      completedAt: new Date(),
-    });
+  //  add completion event (NO RESET EVER)
+  program.completedExercises.push({
+    exerciseId: new Types.ObjectId(dto.exerciseId),
+    completedAt: new Date(),
+  });
 
-    const totalProgramExercises = program.totalExercises * program.repeatCount;
-    const completedSoFar =
-      program.currentRound * program.totalExercises +
-      program.completedExercises.length;
+  // ================================
+  // 📊 PROGRESS CALCULATION (FIXED)
+  // ================================
+  const totalProgramExercises =
+    program.totalExercises * program.repeatCount;
 
-    program.progress = totalProgramExercises > 0
+  const completedSoFar =
+    program.currentRound * program.totalExercises +
+    program.completedExercises.length;
+
+  program.progress =
+    totalProgramExercises > 0
       ? Math.round((completedSoFar / totalProgramExercises) * 100)
       : 0;
 
-    if (program.completedExercises.length === program.totalExercises) {
-      if (program.currentRound < program.repeatCount - 1) {
-        program.currentRound += 1;
-        program.completedExercises = [];
-      } else {
-        program.status = UserProgramStatus.COMPLETED;
-        program.completedAt = new Date();
-      }
-    }
+  //  ROUND COMPLETION LOGIC (FIXED)
+  const isRoundCompleted =
+    program.completedExercises.length >= program.totalExercises;
 
-    return program.save();
+  const isLastRound =
+    program.currentRound >= program.repeatCount - 1;
+
+  if (isRoundCompleted && !isLastRound) {
+    program.currentRound += 1;
+
   }
+
+  // ================================
+  // 🏁 FINAL COMPLETION
+  // ================================
+  if (isRoundCompleted && isLastRound) {
+    program.status = UserProgramStatus.COMPLETED;
+    program.completedAt = new Date();
+    program.progress = 100;
+  }
+
+  // 💾 SAVE
+  await program.save();
+
+  return {
+    message: 'Exercise completed successfully',
+    progress: program.progress,
+    currentRound: program.currentRound,
+    status: program.status,
+  };
+}
 }
