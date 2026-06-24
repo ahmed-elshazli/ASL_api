@@ -4,56 +4,59 @@ import {
   Get,
   Body,
   Query,
- UseInterceptors,
+  UseInterceptors,
   UploadedFile,
   Delete,
   Param,
 } from '@nestjs/common';
-import { MessagesService } from './messages.service';
-import { SendMessageDto } from './dto/send-message.dto';
-import { CurrentUserId } from 'src/common/decorators/current-user.decorator';
-import { BuildQueryDto } from 'src/common/dto/base-query.dto';
+import {
+  ApiTags,
+  ApiOperation,
+ 
+  ApiBearerAuth,
+  ApiConsumes,
+} from '@nestjs/swagger';
 import { FileInterceptor } from '@nestjs/platform-express';
 
+import { MessagesService } from './messages.service';
+import { SendMessageDto } from './dto/send-message.dto';
+import { BuildQueryDto } from 'src/common/dto/base-query.dto';
+import { CurrentUserId } from 'src/common/decorators/current-user.decorator';
+
+@ApiTags('Messages')
+@ApiBearerAuth()
 @Controller('messages')
 export class MessagesController {
   constructor(private readonly messagesService: MessagesService) {}
-@Post()
-@UseInterceptors(FileInterceptor('file'))
-sendMessage(
-  @Body() dto: SendMessageDto,
 
-  @UploadedFile()
-  file: Express.Multer.File,
+  @Post()
+  @UseInterceptors(FileInterceptor('file'))
+  @ApiOperation({ summary: 'Send a message with an optional file attachment' })
+  @ApiConsumes('multipart/form-data')
 
-  @CurrentUserId()
-  userId: string,
-) {
-  return this.messagesService.sendMessage(
-    userId,
-    dto,
-    file,
-  );
-}
-  @Get()
-  async getMessages(@CurrentUserId() userId: string, @Query() query: BuildQueryDto) {
-    return this.messagesService.getMessages(userId,query);
+  sendMessage(
+    @Body() dto: SendMessageDto,
+    @UploadedFile() file: Express.Multer.File,
+    @CurrentUserId() userId: string,
+  ) {
+    return this.messagesService.sendMessage(userId, dto, file);
   }
 
-
+  @Get()
+  @ApiOperation({ summary: 'Get messages with pagination and filters' })
+  getMessages(
+    @CurrentUserId() userId: string,
+    @Query() query: BuildQueryDto,
+  ) {
+    return this.messagesService.getMessages(userId, query);
+  }
 
   @Delete(':id')
-  async deleteMessage(
+  @ApiOperation({ summary: 'Delete a message by ID' })
+  deleteMessage(
     @Param('id') messageId: string,
-
-    @CurrentUserId()
-    userId: string,
+    @CurrentUserId() userId: string,
   ) {
-    return this.messagesService.deleteMessage(
-      messageId,
-      userId,
-    );
+    return this.messagesService.deleteMessage(messageId, userId);
   }
 }
-
-
