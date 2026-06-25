@@ -60,12 +60,17 @@ import { MessagesModule } from './messages/messages.module';
       ttl: 60,
       isGlobal: true,
     }),
+BullModule.forRootAsync({
+  inject: [ConfigService],
+useFactory: (config: ConfigService) => {
 
-  BullModule.forRoot({
-  connection: {
-    host: 'localhost',
-    port: 6379,
-  },
+  return {
+    connection: {
+      url: config.getOrThrow<string>('REDIS_URL'),
+    },
+  };
+},
+  
 }),
 
     AuthModule,

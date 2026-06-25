@@ -31,6 +31,8 @@ export const validationSchema = Joi.object({
   UPLOAD_RATE_LIMIT_TTL: Joi.number().default(60000),
   UPLOAD_RATE_LIMIT_LIMIT: Joi.number().default(10),
 
-  // Frontend URL
-  // FRONTEND_URL: Joi.string().uri().optional(),
+  // Frontend URL .uri()
+  FRONTEND_URL: Joi.string().optional(),
+  REDIS_URL:Joi.string().uri().optional(),
+
 });
