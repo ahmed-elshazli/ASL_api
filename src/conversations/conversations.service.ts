@@ -203,7 +203,7 @@ export class ConversationsService {
       .populate({
         path: 'lastMessage',
         select:
-          'senderId content createdAt',
+          'senderId content createdAt fileUrl',
       });
   }
 
@@ -472,7 +472,6 @@ async leaveConversation(
         currentUserId.toString(),
     );
 
-  // لو مفيش حد متبقي نحذف الجروب
   if (remainingParticipants.length === 0) {
     await this.conversationModel.findByIdAndDelete(
       conversationId,
@@ -487,7 +486,6 @@ async leaveConversation(
     participants: remainingParticipants,
   };
 
-  // لو الـ Owner خرج
   if (
     conversation.owner?.toString() ===
     currentUserId.toString()
@@ -502,6 +500,26 @@ async leaveConversation(
     {
       new: true,
     },
+  );
+}
+
+async markAsRead(
+  conversationId: string,
+  userId: string,
+) {
+  const conversation =
+    await this.findConversationOrThrow(
+      conversationId,
+    );
+
+  this.ensureParticipant(
+    conversation,
+    userId,
+  );
+
+  return this.resetUnreadCount(
+    conversationId,
+    userId,
   );
 }
 }

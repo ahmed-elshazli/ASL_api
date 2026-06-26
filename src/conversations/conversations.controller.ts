@@ -80,29 +80,6 @@ export class ConversationsController {
     return this.conversationsService.updateLastMessage(conversationId, messageId);
   }
 
-  @Patch(':id/unread/increase')
-  @ApiOperation({ summary: 'Increase unread message count for a user in a conversation' })
-  @ApiParam({ name: 'id', description: 'Conversation ID' })
-  @ApiBody({ schema: { properties: { userId: { type: 'string' } }, required: ['userId'] } })
-  @ApiOkResponse({ description: 'Unread count increased' })
-  increaseUnread(
-    @Param('id') conversationId: string,
-    @Body('userId') userId: string,
-  ) {
-    return this.conversationsService.increaseUnreadCount(conversationId, userId);
-  }
-
-  @Patch(':id/unread/reset')
-  @ApiOperation({ summary: 'Reset unread message count for a user in a conversation' })
-  @ApiParam({ name: 'id', description: 'Conversation ID' })
-  @ApiBody({ schema: { properties: { userId: { type: 'string' } }, required: ['userId'] } })
-  @ApiOkResponse({ description: 'Unread count reset to zero' })
-  resetUnread(
-    @Param('id') conversationId: string,
-    @Body('userId') userId: string,
-  ) {
-    return this.conversationsService.resetUnreadCount(conversationId, userId);
-  }
 
   @Patch(':id/add-participant')
   @ApiOperation({ summary: 'Add a participant to a conversation' })
@@ -161,4 +138,16 @@ export class ConversationsController {
   ) {
     return this.conversationsService.leaveConversation(conversationId, currentUserId);
   }
+
+
+@Patch(':id/read')
+markAsRead(
+  @Param('id') conversationId: string,
+  @CurrentUserId() userId: string,
+) {
+  return this.conversationsService.markAsRead(
+    conversationId,
+    userId,
+  );
+}
 }

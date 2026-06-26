@@ -1,15 +1,25 @@
 import {
-  WebSocketGateway,
-  SubscribeMessage,
-  MessageBody,
   ConnectedSocket,
-  WebSocketServer,
+  MessageBody,
   OnGatewayConnection,
   OnGatewayDisconnect,
+  SubscribeMessage,
+  WebSocketGateway,
+  WebSocketServer,
+  WsException,
 } from '@nestjs/websockets';
 
 import { Server, Socket } from 'socket.io';
+
+import { JwtService } from '@nestjs/jwt';
+import { ConfigService } from '@nestjs/config';
+
+import { InjectModel } from '@nestjs/mongoose';
+import { Model, Types } from 'mongoose';
+
 import { MessagesService } from '../messages/messages.service';
+import { Conversation } from '../conversations/schemas/conversation.schema';
+import { User } from '../users/schema/users.schema';
 
 @WebSocketGateway({
   cors: {
@@ -19,85 +29,268 @@ import { MessagesService } from '../messages/messages.service';
 export class ChatGateway
   implements OnGatewayConnection, OnGatewayDisconnect
 {
-  constructor(private readonly messagesService: MessagesService) {}
+  constructor(
+    private readonly messagesService: MessagesService,
+    private readonly jwtService: JwtService,
+    private readonly configService: ConfigService,
+
+    @InjectModel(User.name)
+    private readonly userModel: Model<User>,
+
+    @InjectModel(Conversation.name)
+    private readonly conversationModel: Model<Conversation>,
+  ) {}
 
   @WebSocketServer()
   server: Server;
 
-  // CONNECTION LIFECYCLE
+  // userId -> Set<socketId>
+  private onlineUsers = new Map<string, Set<string>>();
 
-  handleConnection(client: Socket) {
-    console.log(`Client connected: ${client.id}`);
+  // =========================
+  // HELPERS
+  // =========================
+
+  private getUserId(client: Socket): string {
+    return client.data.user._id.toString();
   }
 
-  handleDisconnect(client: Socket) {
-    console.log(`Client disconnected: ${client.id}`);
+  private addOnlineUser(userId: string, socketId: string): void {
+    const sockets = this.onlineUsers.get(userId) ?? new Set<string>();
+    sockets.add(socketId);
+    this.onlineUsers.set(userId, sockets);
+  }
+
+  private removeOnlineUser(userId: string, socketId: string): void {
+    const sockets = this.onlineUsers.get(userId);
+    if (!sockets) return;
+
+    sockets.delete(socketId);
+
+    if (!sockets.size) {
+      this.onlineUsers.delete(userId);
+    }
+  }
+
+  private broadcastOnlineUsers(): void {
+    this.server.emit('onlineUsers', {
+      users: Array.from(this.onlineUsers.keys()),
+    });
   }
 
   // =========================
-  // JOIN CONVERSATION ROOM
+  // CONNECTION
   // =========================
 
-  @SubscribeMessage('join_conversation')
-  handleJoinConversation(
+  async handleConnection(client: Socket) {
+    try {
+      const token = client.handshake.auth?.token;
+
+      if (!token) {
+        client.disconnect();
+        return;
+      }
+
+      const payload = await this.jwtService.verifyAsync(token, {
+        secret: this.configService.getOrThrow('jwt.access.secret'),
+      });
+
+      const user = await this.userModel
+        .findById(payload.sub)
+        .select('_id email role isActive passwordChangedAt')
+        .lean();
+
+      if (!user || !user.isActive) {
+        client.disconnect();
+        return;
+      }
+
+      if (user.passwordChangedAt) {
+        const changedTimestamp = Math.floor(
+          user.passwordChangedAt.getTime() / 1000,
+        );
+
+        if (changedTimestamp > payload.iat) {
+          client.disconnect();
+          return;
+        }
+      }
+
+      client.data.user = user;
+
+      const userId = user._id.toString();
+
+      this.addOnlineUser(userId, client.id);
+
+      this.broadcastOnlineUsers();
+
+      console.log(`Socket Connected: ${userId}`);
+    } catch {
+      client.disconnect();
+    }
+  }
+
+  // =========================
+  // DISCONNECT
+  // =========================
+
+  async handleDisconnect(client: Socket) {
+    const user = client.data?.user;
+
+    if (!user) return;
+
+    const userId = user._id.toString();
+
+    this.removeOnlineUser(userId, client.id);
+
+    this.broadcastOnlineUsers();
+
+    console.log(`Socket Disconnected: ${userId}`);
+  }
+
+  // =========================
+  // JOIN CONVERSATION
+  // =========================
+
+  @SubscribeMessage('joinConversation')
+  async handleJoinConversation(
     @ConnectedSocket() client: Socket,
     @MessageBody() conversationId: string,
   ) {
-    client.join(conversationId);
+    const userId = this.getUserId(client);
+
+    const conversation = await this.conversationModel.findOne({
+      _id: new Types.ObjectId(conversationId),
+      participants: new Types.ObjectId(userId),
+    });
+
+    if (!conversation) {
+      throw new WsException('Access denied');
+    }
+
+    await client.join(conversationId);
+
+    await this.conversationModel.findByIdAndUpdate(conversationId, {
+      $set: { [`unreadCount.${userId}`]: 0 },
+    });
 
     return {
-      event: 'joined_conversation',
+      event: 'joinedConversation',
       conversationId,
     };
   }
 
   // =========================
-  // SEND MESSAGE (REALTIME CORE)
+  // LEAVE CONVERSATION
   // =========================
 
-  @SubscribeMessage('send_message')
+  @SubscribeMessage('leaveConversation')
+  async handleLeaveConversation(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() conversationId: string,
+  ) {
+    await client.leave(conversationId);
+
+    return {
+      event: 'leftConversation',
+      conversationId,
+    };
+  }
+
+  // =========================
+  // SEND MESSAGE
+  // =========================
+
+  @SubscribeMessage('sendMessage')
   async handleSendMessage(
     @ConnectedSocket() client: Socket,
     @MessageBody()
     payload: {
-      userId: string;
       conversationId: string;
       content: string;
     },
   ) {
-    const message = await this.messagesService.sendMessage(
-      payload.userId,
-      {
-        conversationId: payload.conversationId,
-        content: payload.content,
-      },
-    );
+    if (!payload?.conversationId || !payload?.content?.trim()) {
+      throw new WsException('conversationId and content are required');
+    }
 
-    // broadcast to room
-    this.server
-      .to(payload.conversationId)
-      .emit('new_message', message);
+    const userId = this.getUserId(client);
+
+    const message = await this.messagesService.sendMessage(userId, {
+      conversationId: payload.conversationId,
+      content: payload.content,
+    });
+
+    this.server.to(payload.conversationId).emit('newMessage', message);
 
     return message;
   }
 
-  // TYPING INDICATOR
+  // =========================
+  // TYPING
+  // =========================
 
   @SubscribeMessage('typing')
   handleTyping(
-    @MessageBody()
-    payload: { conversationId: string; userId: string },
+    @ConnectedSocket() client: Socket,
+    @MessageBody() conversationId: string,
   ) {
-    this.server.to(payload.conversationId).emit('typing', payload);
+    if (!conversationId) return;
+
+    client.to(conversationId).emit('typing', {
+      conversationId,
+      userId: client.data.user._id,
+    });
   }
 
-  // SEEN MESSAGE
+  // =========================
+  // STOP TYPING
+  // =========================
 
-  @SubscribeMessage('seen')
-  handleSeen(
-    @MessageBody()
-    payload: { conversationId: string; userId: string },
+  @SubscribeMessage('stopTyping')
+  handleStopTyping(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() conversationId: string,
   ) {
-    this.server.to(payload.conversationId).emit('seen', payload);
+    if (!conversationId) return;
+
+    client.to(conversationId).emit('stopTyping', {
+      conversationId,
+      userId: client.data.user._id,
+    });
+  }
+
+  // =========================
+  // MESSAGE SEEN
+  // =========================
+
+  @SubscribeMessage('messageSeen')
+  handleMessageSeen(
+    @ConnectedSocket() client: Socket,
+    @MessageBody()
+    payload: {
+      conversationId: string;
+      messageId: string;
+    },
+  ) {
+    if (!payload?.conversationId || !payload?.messageId) {
+      throw new WsException('conversationId and messageId are required');
+    }
+
+    client.to(payload.conversationId).emit('messageSeen', {
+      messageId: payload.messageId,
+      userId: client.data.user._id,
+    });
+  }
+
+  // =========================
+  // ONLINE USERS
+  // =========================
+
+  @SubscribeMessage('getOnlineUsers')
+  getOnlineUsers() {
+    return {
+      users: Array.from(this.onlineUsers.keys()),
+    };
   }
 }
