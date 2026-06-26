@@ -9,7 +9,6 @@ import { UserModule } from './users/users.module';
 
 import { StorageModule } from './common/storage/storage.module';
 
-
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 import { CacheInterceptor, CacheModule } from '@nestjs/cache-manager';
@@ -23,6 +22,7 @@ import { WeightLogModule } from './weight-log/weight-log.module';
 import { PatientDashboardModule } from './patient-dashboard/patient-dashboard.module';
 import { ConversationsModule } from './conversations/conversations.module';
 import { MessagesModule } from './messages/messages.module';
+import { ChatModule } from './gateway/chat.module';
 
 @Module({
   imports: [
@@ -60,50 +60,40 @@ import { MessagesModule } from './messages/messages.module';
       ttl: 60,
       isGlobal: true,
     }),
-BullModule.forRootAsync({
-  inject: [ConfigService],
-useFactory: (config: ConfigService) => {
-
-  return {
-    connection: {
-      url: config.getOrThrow<string>('REDIS_URL'),
-    },
-  };
-},
-  
-}),
+    BullModule.forRootAsync({
+      inject: [ConfigService],
+      useFactory: (config: ConfigService) => {
+        return {
+          connection: {
+            url: config.getOrThrow<string>('REDIS_URL'),
+          },
+        };
+      },
+    }),
 
     AuthModule,
     UserModule,
-  
+
     StorageModule,
-  
+
     PlansModule,
-  
+
     ExercisesModule,
-  
+
     TrainingProgramModule,
-  
+
     UserTrainingProgramModule,
-  
-  
+
     UploadQueueModule,
-  
-  
+
     WeightLogModule,
-  
-  
+
     PatientDashboardModule,
-  
-  
+
     ConversationsModule,
-  
-  
+
     MessagesModule,
-  
-  
- 
- 
+    ChatModule,
   ],
 
   providers: [

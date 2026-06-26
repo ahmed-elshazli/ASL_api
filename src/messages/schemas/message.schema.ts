@@ -1,5 +1,4 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { date } from 'joi';
 import { Types, HydratedDocument } from 'mongoose';
 
 export type MessageDocument = HydratedDocument<Message>;
@@ -44,7 +43,7 @@ export class Message {
 
   @Prop()
   mimeType?: string;
- @Prop({default:Date.now()})
+ @Prop({ default: Date.now})
   createdAt: Date;
 }
 export const MessageSchema = SchemaFactory.createForClass(Message);

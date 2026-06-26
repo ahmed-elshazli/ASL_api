@@ -99,13 +99,32 @@ async sendMessage(
       mimeType: file?.mimetype,
     });
 
-  await this.conversationModel.findByIdAndUpdate(
-    conversationId,
-    {
-      lastMessage: message._id,
-      lastMessageAt: new Date(),
-    },
-  );
+// Increase unread count for all participants except sender
+
+const unreadUpdates: Record<string, number> = {};
+
+for (const participant of conversation.participants) {
+  const participantId = participant.toString();
+
+
+  if (participantId === userId.toString()) {
+    continue;
+  }
+
+  unreadUpdates[
+    `unreadCount.${participantId}`
+  ] = 1;
+}
+
+await this.conversationModel.findByIdAndUpdate(
+  conversationId,
+  {
+    $inc: unreadUpdates,
+
+    lastMessage: message._id,
+    lastMessageAt: new Date(),
+  },
+);
 
   return message;
 }
