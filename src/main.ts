@@ -68,7 +68,7 @@ app.enableCors({
   ],
   methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE'],
   allowedHeaders: ['Content-Type', 'Accept', 'Authorization'],
-  credentials: true,
+  // credentials: true,
 });
 
   const reflector = app.get(Reflector);
