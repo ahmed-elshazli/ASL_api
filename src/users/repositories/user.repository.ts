@@ -37,7 +37,7 @@ export class UsersRepository implements IUsersRepository {
  async findById(id: string): Promise<UserDocument | null> {
   return this.userModel.findOne({
     _id: id,
-  
+   
   });
 }
 

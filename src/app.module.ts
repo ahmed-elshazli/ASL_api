@@ -23,6 +23,7 @@ import { PatientDashboardModule } from './patient-dashboard/patient-dashboard.mo
 import { ConversationsModule } from './conversations/conversations.module';
 import { MessagesModule } from './messages/messages.module';
 import { ChatModule } from './gateway/chat.module';
+import { SubscriptionPlanModule } from './subscription-plan/subscription-plan.module';
 
 @Module({
   imports: [
@@ -94,6 +95,7 @@ import { ChatModule } from './gateway/chat.module';
 
     MessagesModule,
     ChatModule,
+    SubscriptionPlanModule,
   ],
 
   providers: [

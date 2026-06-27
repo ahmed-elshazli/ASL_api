@@ -121,4 +121,5 @@ export class BuildQueryDto {
   
 @IsOptional()
   content:string
+
 }
