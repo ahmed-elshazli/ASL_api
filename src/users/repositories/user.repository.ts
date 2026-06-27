@@ -38,7 +38,7 @@ export class UsersRepository implements IUsersRepository {
   return this.userModel.findOne({
     _id: id,
     isActive: true,
-  }).lean();
+  });
 }
 
   async findByIdWithPassword(id: string): Promise<UserDocument | null> {
