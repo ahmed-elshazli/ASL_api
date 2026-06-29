@@ -40,11 +40,17 @@ export class UploadService {
   async replace(oldImages: string[], newFiles?: Express.Multer.File[]) {
   if (!newFiles?.length) return oldImages;
 
-  const uploaded = await this.upload(newFiles);
+  // Upload first
+  const uploadedImages = await this.upload(newFiles);
 
-  await this.deleteImages(oldImages);
+  // Delete old images (don't fail update if deletion fails)
+  try {
+    await this.deleteImages(oldImages);
+  } catch (error) {
+    console.error('Failed to delete old images:', error);
+  }
 
-  return uploaded;
+  return uploadedImages;
 }
 
   //  Delete multiple

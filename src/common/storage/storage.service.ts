@@ -89,18 +89,24 @@ export class StorageService {
 
     this.validateFolder(folder);
 
-    const uploads = await Promise.all(
-      files.map(async (file) => {
-        await this.validateFile(file, options?.allowedTypes);
+ const uploads = await Promise.all(
+  files.map(async (file, index) => {
+    console.time(`Upload ${index}`);
 
-        return this.provider.upload(
-          file.buffer,
-          file.mimetype,
-          folder,
-          { isPrivate: options?.isPrivate },
-        );
-      }),
+    await this.validateFile(file, options?.allowedTypes);
+
+    const result = await this.provider.upload(
+      file.buffer,
+      file.mimetype,
+      folder,
+      { isPrivate: options?.isPrivate },
     );
+
+    console.timeEnd(`Upload ${index}`);
+
+    return result;
+  }),
+);
 
     return uploads;
   }
