@@ -7,28 +7,4 @@ import { UpdateUserSubscriptionDto } from './dto/update-user-subscription.dto';
 export class UserSubscriptionController {
   constructor(private readonly userSubscriptionService: UserSubscriptionService) {}
 
-  @Post()
-  create(@Body() createUserSubscriptionDto: CreateUserSubscriptionDto) {
-    return this.userSubscriptionService.create(createUserSubscriptionDto);
-  }
-
-  @Get()
-  findAll() {
-    return this.userSubscriptionService.findAll();
-  }
-
-  @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.userSubscriptionService.findOne(+id);
-  }
-
-  @Patch(':id')
-  update(@Param('id') id: string, @Body() updateUserSubscriptionDto: UpdateUserSubscriptionDto) {
-    return this.userSubscriptionService.update(+id, updateUserSubscriptionDto);
-  }
-
-  @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.userSubscriptionService.remove(+id);
-  }
 }
