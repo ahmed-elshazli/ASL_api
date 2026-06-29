@@ -40,7 +40,7 @@ export class SubscriptionPlanService {
 
     const features = new ApiFeatures(baseQuery, query)
       .filter()
-      .search(['title', 'description']);
+      .search(['name', 'description']);
 
     const total = await features.count();
 
@@ -82,7 +82,7 @@ export class SubscriptionPlanService {
     return this.subscriptionPlanModel.findByIdAndUpdate(id, dto, {
       returnDocument:"after",
       runValidators: true,
-    });
+    }).lean();
   }
 
 

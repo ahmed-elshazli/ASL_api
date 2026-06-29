@@ -103,7 +103,7 @@ export class UsersController {
   @ApiOkResponse({ description: 'User deleted successfully' })
   
   @Delete(':id/delete')
-  async hardDelete(@Param('id', ParseObjectIdPipe) id: string) {
-    return this.usersService.hardDelete(id);
+  async softDelete(@Param('id', ParseObjectIdPipe) id: string) {
+    return this.usersService.softDelete(id);
   }
 }

@@ -150,14 +150,20 @@ export class UsersService {
     return { message: 'User activated successfully', isActive: true };
   }
 
-  async hardDelete(id: string): Promise<{ message: string }> {
+  async softDelete(id: string): Promise<{ message: string }> {
     const user = await this.usersRepository.findById(id);
     if (!user) throw new NotFoundException('User not found');
 
     await this.imageService.deleteImages(user.images);
-    await this.usersRepository.deleteOne(user);
 
-    return { message: 'User deleted permanently' };
+     if (user.isActive) {
+      user.isActive = false;
+      user.refreshToken = undefined;
+      await this.usersRepository.save(user);
+      return { message: 'User deleted successfully'};
+    }
+
+    return { message: 'User deleted successfully' };
   }
 
   async changePassword(userId: string, dto: ChangePasswordDto) {

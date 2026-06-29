@@ -82,28 +82,32 @@ export class UserTrainingProgramService {
   }
 
 async getUserPrograms(userId: string) {
-   if (!Types.ObjectId.isValid(userId)) {
-      throw new BadRequestException('Invalid userId');
-    }
+    if (!Types.ObjectId.isValid(userId)) {
+    throw new BadRequestException('Invalid userId');
+  }
 
-  return this.utpModel
-    .find({ userId:userId.toString() })
-     .populate({
-    path: 'programId',
-    populate: {
-      path: 'exercises.exerciseId',
-      model: 'Exercise',
-    }})
+  const result = await this.utpModel
+    .find({ userId: userId.toString() })
+    .populate({
+      path: 'programId',
+      populate: {
+        path: 'exercises.exerciseId',
+        model: 'Exercise',
+      },
+    })
     .sort({ createdAt: -1 })
     .lean();
+
+  return result;
 }
 
   async getProgramUsers(programId: string) {
     if (!Types.ObjectId.isValid(programId)) {
       throw new BadRequestException('Invalid programId');
     }
+   const result= await  this.utpModel.find({ programId }).populate('userId','fullName email phone').sort({ createdAt: -1 }).lean();
+    return result
 
-    return this.utpModel.find({ programId }).populate('userId','fullName email phone').sort({ createdAt: -1 }).lean();
   }
 
   async deleteUserProgram(userId: string, programId: string) {

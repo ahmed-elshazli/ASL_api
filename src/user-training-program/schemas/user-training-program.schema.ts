@@ -23,6 +23,7 @@ export class UserTrainingProgram {
     type: Types.ObjectId,
     ref: 'User',
     required: true,
+    index: true,
   })
   userId: Types.ObjectId;
 
@@ -30,6 +31,7 @@ export class UserTrainingProgram {
     type: Types.ObjectId,
     ref: 'TrainingProgram',
     required: true,
+    index: true,
   })
   programId: Types.ObjectId;
 

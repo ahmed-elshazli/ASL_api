@@ -48,7 +48,7 @@ export class PlansService {
 
     const features = new ApiFeatures(baseQuery, query)
       .filter()
-      .search(['title', 'description']);
+      .search(['title', 'comment']);
 
   
       const total = await features.count();
