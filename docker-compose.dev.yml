@@ -7,7 +7,6 @@ services:
       context: .
       dockerfile: Dockerfile
     container_name: nutrition_platform_dev
-
     restart: unless-stopped
 
     ports:
@@ -45,7 +44,7 @@ services:
       - mongo_data:/data/db
 
     healthcheck:
-      test: ["CMD", "mongosh", "--username", "admin", "--password", "password", "--authenticationDatabase", "admin", "--eval", "db.adminCommand('ping')"]
+      test: ["CMD-SHELL", "mongosh --username $$MONGO_INITDB_ROOT_USERNAME --password $$MONGO_INITDB_ROOT_PASSWORD --authenticationDatabase admin --eval \"db.adminCommand('ping')\""]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -92,7 +91,6 @@ services:
       ME_CONFIG_MONGODB_ADMINUSERNAME: ${MONGO_USERNAME:-admin}
       ME_CONFIG_MONGODB_ADMINPASSWORD: ${MONGO_PASSWORD:-password}
       ME_CONFIG_MONGODB_AUTH_DATABASE: admin
-
       ME_CONFIG_BASICAUTH_USERNAME: ${ME_USERNAME:-admin}
       ME_CONFIG_BASICAUTH_PASSWORD: ${ME_PASSWORD:-admin123}
 
