@@ -2,6 +2,7 @@ import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { HydratedDocument, Types } from 'mongoose';
 import * as bcrypt from 'bcrypt';
 import { UserRole } from 'src/users/enums/roles.enum';
+import { BCRYPT_ROUNDS } from 'src/common/constants/security.constants';
 
 export type UserDocument = HydratedDocument<User>;
 
@@ -85,7 +86,7 @@ export const UserSchema = SchemaFactory.createForClass(User);
 UserSchema.pre<UserDocument>('save', async function () {
   if (!this.isModified('password')) return;
 
-  this.password = await bcrypt.hash(this.password, 10);
+  this.password = await bcrypt.hash(this.password, BCRYPT_ROUNDS);
 
   if (!this.isNew) {
     this.passwordChangedAt = new Date();

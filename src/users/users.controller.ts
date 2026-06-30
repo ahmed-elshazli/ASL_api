@@ -30,7 +30,6 @@ import { CreateUserDto } from './dto/create-user.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
 import { CurrentUser } from 'src/common/decorators/current-user.decorator';
 import { UserRole } from './enums/roles.enum';
-import { Public } from 'src/common/decorators/public.decorator';
 
 @ApiTags('Users')
 @ApiBearerAuth()
@@ -57,7 +56,7 @@ export class UsersController {
   }
   @ApiOperation({ summary: 'Change user password' })
   @ApiOkResponse({ description: 'Password changed  successfully' })
-  @Roles(UserRole.ADMIN)
+ @Roles(UserRole.ADMIN,UserRole.DOCTOR,UserRole.PATIENT)
   @Patch('change-password')
   async changePassword(
     @CurrentUser('_id') userId: string,
@@ -80,7 +79,7 @@ export class UsersController {
   @ApiParam({ name: 'id', description: 'User ID' })
   @ApiOkResponse({ type: UserResponseDto })
   @UseInterceptors(FilesInterceptor('images', 2))
-   @Roles(UserRole.ADMIN)
+   
   @Patch(':id')
   async update(
     @Param('id', ParseObjectIdPipe) id: string,

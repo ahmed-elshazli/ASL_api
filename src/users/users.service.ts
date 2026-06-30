@@ -20,6 +20,7 @@ import { generateTokens } from 'src/common/utils/generate-token';
 import { ConfigService } from '@nestjs/config';
 import { AuthResponseDto } from './dto/response.dto';
 import { WeightLogService } from 'src/weight-log/weight-log.service';
+import { AuthSessionService } from 'src/auth/services/auth-session.service';
 
 @Injectable()
 export class UsersService {
@@ -27,8 +28,7 @@ export class UsersService {
     @Inject(USERS_REPOSITORY)
     private readonly usersRepository: IUsersRepository,
     private readonly imageService: UploadService,
-    private readonly jwtService: JwtService,
-    private readonly configService: ConfigService,
+    private readonly authSessionService: AuthSessionService,
      private readonly weightLogService: WeightLogService,
   ) {}
 
@@ -50,16 +50,7 @@ export class UsersService {
   
 
     // 3.Generate tokens
-    const tokens = await generateTokens(
-      user._id.toString(),
-      user.role,
-      this.jwtService,
-      this.configService,
-    );
-    const hashedRefreshToken = await bcrypt.hash(tokens.refreshToken, 12);
-    await this.usersRepository.updateById(user._id.toString(), {
-      refreshToken: hashedRefreshToken,
-    });
+     const tokens = await this.authSessionService.createSession(user);
 
     // 6. Return response
     return {
@@ -180,22 +171,12 @@ export class UsersService {
     user.password = dto.password;
     await this.usersRepository.save(user);
 
-    const newTokens = await generateTokens(
-      user._id.toString(),
-      user.role,
-      this.jwtService,
-      this.configService,
-    );
-
-   const hashedRefreshToken = await bcrypt.hash(newTokens.refreshToken, 12);
-    await this.usersRepository.updateById(user._id.toString(), {
-      refreshToken: hashedRefreshToken,
-    });
+  const tokens = await this.authSessionService.createSession(user);
 
     return {
       message: 'Password changed successfully',
       newTokens: {
-        accessToken: newTokens.accessToken,
+        accessToken:tokens.accessToken,
       },
     };
   }
