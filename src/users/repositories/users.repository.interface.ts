@@ -18,6 +18,10 @@ export interface IUsersRepository {
   findByIdWithPassword(id: string): Promise<UserDocument | null>;
   findAll(query: BuildQueryDto): Promise<PaginatedUsers>;
 
+    findByEmailWithResetFields(
+    email: string,
+  ): Promise<UserDocument | null>
+
   // ── Mutations ─────────────────────────────────────────────
   create(data: Partial<User>): Promise<UserDocument>;
 updateById(

@@ -28,6 +28,7 @@ import { UserSubscriptionModule } from './user-subscription/user-subscription.mo
 import { PaymobModule } from './paymob/paymob.module';
 import { ReviewsModule } from './review/review.module';
 import { AboutUsModule } from './about-us/about-us.module';
+import { MailModule } from './mail/mail.module';
 
 @Module({
   imports: [
@@ -104,6 +105,7 @@ import { AboutUsModule } from './about-us/about-us.module';
     PaymobModule,
     ReviewsModule,
     AboutUsModule,
+    MailModule,
   ],
 
   providers: [

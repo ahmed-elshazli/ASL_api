@@ -20,7 +20,7 @@ export class UsersRepository implements IUsersRepository {
   // ── Queries ────────────────────────────────────────────────
 
   async findByEmail(email: string): Promise<UserDocument | null> {
-    return this.userModel.findOne({ email }).lean();
+    return this.userModel.findOne({ email });
   }
 
   async findByEmailWithPassword(email: string): Promise<UserDocument | null> {
@@ -31,7 +31,7 @@ export class UsersRepository implements IUsersRepository {
     email: string,
     excludeId: string,
   ): Promise<UserDocument | null> {
-    return this.userModel.findOne({ email, _id: { $ne: excludeId } }).lean();
+    return this.userModel.findOne({ email, _id: { $ne: excludeId } });
   }
 
  async findById(id: string): Promise<UserDocument | null> {
@@ -42,7 +42,7 @@ export class UsersRepository implements IUsersRepository {
 }
 
   async findByIdWithPassword(id: string): Promise<UserDocument | null> {
-    return this.userModel.findById(id).select('+password').lean();
+    return this.userModel.findById(id).select('+password');
   }
 
   async findAll(query: BuildQueryDto): Promise<PaginatedUsers> {
@@ -82,4 +82,14 @@ export class UsersRepository implements IUsersRepository {
   async deleteOne(doc: UserDocument): Promise<void> {
     await doc.deleteOne();
   }
+
+  async findByEmailWithResetFields(
+  email: string,
+): Promise<UserDocument | null> {
+  return this.userModel
+    .findOne({ email })
+    .select(
+      '+passwordResetCode +passwordResetExpires +passwordResetVerified',
+    );
+}
 }

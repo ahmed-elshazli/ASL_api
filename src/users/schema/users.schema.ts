@@ -62,13 +62,13 @@ export class User {
   @Prop()
   passwordChangedAt?: Date;
 
-  @Prop()
+  @Prop({ select: false })
   passwordResetCode?: string;
 
-  @Prop()
+  @Prop({ select: false })
   passwordResetExpires?: Date;
 
-  @Prop({ default: false })
+  @Prop({ default: false,select: false })
   passwordResetVerified?: boolean;
 
   @Prop({ select: false })

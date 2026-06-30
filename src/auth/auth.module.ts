@@ -12,13 +12,16 @@ import { JwtStrategy } from 'src/auth/strategies/jwt.strategy';
 import { UploadService } from 'src/common/storage/upload.service';
 import { UsersRepository } from 'src/users/repositories/user.repository';
 import { USERS_REPOSITORY } from 'src/users/repositories/users.repository.interface';
+import { MailModule } from 'src/mail/mail.module';
 
 @Module({
   imports: [
     
     MongooseModule.forFeature([
       { name: User.name, schema: UserSchema },
+      
     ]),
+     
 
 
     JwtModule.registerAsync({
@@ -32,6 +35,8 @@ import { USERS_REPOSITORY } from 'src/users/repositories/users.repository.interf
         },
       }),
     }),
+
+    MailModule,
   ],
 
   controllers: [AuthController],
