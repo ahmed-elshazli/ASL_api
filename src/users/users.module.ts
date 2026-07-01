@@ -9,8 +9,8 @@ import { ConfigService } from '@nestjs/config';
 import { StringValue } from 'ms';
 import { UsersRepository } from './repositories/user.repository';
 import { USERS_REPOSITORY } from './repositories/users.repository.interface';
-import { WeightLogService } from 'src/weight-log/weight-log.service';
 import { WeightLogModule } from 'src/weight-log/weight-log.module';
+import { AuthModule } from 'src/auth/auth.module';
 
 @Module({
   imports: [
@@ -32,6 +32,7 @@ import { WeightLogModule } from 'src/weight-log/weight-log.module';
         }),
 
          WeightLogModule, 
+         AuthModule,
   ],
   controllers: [UsersController],
   providers: [UsersService,UploadService,   UsersRepository,

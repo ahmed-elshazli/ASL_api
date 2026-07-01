@@ -7,14 +7,12 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
-import { JwtService } from '@nestjs/jwt';
+
 
 import { USERS_REPOSITORY } from '../users/repositories/users.repository.interface';
 import type { IUsersRepository } from '../users/repositories/users.repository.interface';
 import type { LoginDto } from './dto/login.dto';
 import { UserResponseDto } from 'src/users/dto/user-response.dto';
-import { generateTokens } from 'src/common/utils/generate-token';
-import { ConfigService } from '@nestjs/config';
 import { AuthResponseDto } from 'src/users/dto/response.dto';
 import { RegisterDto } from './dto/register.dto';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
@@ -22,45 +20,40 @@ import { createHash, randomInt } from 'crypto';
 import { MailService } from 'src/mail/mail.service';
 import { VerifyResetCodeDto } from './dto/verify-reset-code.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
+import {  RESET_CODE_EXPIRES_MS } from 'src/common/constants/security.constants';
+import { AuthSessionService } from './services/auth-session.service';
 
 @Injectable()
 export class AuthService {
   constructor(
     @Inject(USERS_REPOSITORY)
     private readonly usersRepository: IUsersRepository,
-    private readonly jwtService: JwtService,
-    private readonly configService: ConfigService,
+  private readonly authSessionService: AuthSessionService,
     private readonly mailService: MailService,
   ) {}
 
-  async register(dto: RegisterDto): Promise<AuthResponseDto> {
-    const existing = await this.usersRepository.findByEmail(dto.email);
-    if (existing) {
-      throw new ConflictException('User already exists');
-    }
 
-    const user = await this.usersRepository.create(dto);
 
-    const tokens = await generateTokens(
-      user._id.toString(),
-      user.role,
-      this.jwtService,
-      this.configService,
-    );
 
-    const hashedRefreshToken = await bcrypt.hash(tokens.refreshToken, 12);
 
-    await this.usersRepository.updateById(user._id.toString(), {
-      refreshToken: hashedRefreshToken,
-    });
 
-    return {
-      user: UserResponseDto.fromEntity(user),
-      accessToken: tokens.accessToken,
-    };
+async register(dto: RegisterDto): Promise<AuthResponseDto> {
+  const existingUser = await this.usersRepository.findByEmail(dto.email);
+
+  if (existingUser) {
+    throw new ConflictException('User already exists');
   }
 
-  // Login
+  const user = await this.usersRepository.create(dto);
+
+  const tokens = await this.authSessionService.createSession(user);
+
+ return {
+    user: UserResponseDto.fromEntity(user),
+    accessToken: tokens.accessToken,
+}
+}
+
 
   async login(dto: LoginDto): Promise<AuthResponseDto> {
     const user = await this.usersRepository.findByEmailWithPassword(dto.email);
@@ -81,23 +74,15 @@ export class AuthService {
       throw new UnauthorizedException('Invalid email or password');
     }
 
-    // 4. JWT GENERATION
-    const tokens = await generateTokens(
-      user._id.toString(),
-      user.role,
-      this.jwtService,
-      this.configService,
-    );
-    const hashedRefreshToken = await bcrypt.hash(tokens.refreshToken, 12);
-    await this.usersRepository.updateById(user._id.toString(), {
-      refreshToken: hashedRefreshToken,
-    });
+    
+   const tokens = await this.authSessionService.createSession(user);
 
-    return {
-      user: UserResponseDto.fromEntity(user),
-      accessToken: tokens.accessToken,
-    };
-  }
+
+ return {
+    user: UserResponseDto.fromEntity(user),
+    accessToken: tokens.accessToken,
+}
+}
 
   // Forgot Password
 
@@ -118,7 +103,7 @@ async forgotPassword(
     .digest('hex');
 
   user.passwordResetCode = hashedResetCode;
-  user.passwordResetExpires = new Date(Date.now() + 10 * 60 * 1000);
+  user.passwordResetExpires = new Date(Date.now() + RESET_CODE_EXPIRES_MS);
   user.passwordResetVerified = false;
 
   await this.usersRepository.save(user);
