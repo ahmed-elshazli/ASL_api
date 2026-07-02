@@ -1,4 +1,4 @@
-import { Controller, Get, Param } from '@nestjs/common';
+import { Controller, Get, Param, Query } from '@nestjs/common';
 import { PatientDashboardService } from './patient-dashboard.service';
 import { CurrentUserId } from 'src/common/decorators/current-user.decorator';
 import { UserRole } from 'src/users/enums/roles.enum';
@@ -10,6 +10,7 @@ import {
 
   ApiTags,
 } from '@nestjs/swagger';
+import { BuildQueryDto } from 'src/common/dto/base-query.dto';
 
 @ApiTags('Patient Dashboard')
 @ApiBearerAuth()
@@ -34,6 +35,13 @@ export class PatientDashboardController {
     return this.patientDashboardService.getDashboard(userId);
   }
 
+  @Roles(UserRole.PATIENT, UserRole.DOCTOR, UserRole.ADMIN)
+  @Get('weight-history')
+  async getWeightHistory(@CurrentUserId() userId: string) {
+     console.log('Current User Id:', userId);
+    return this.weightLogService.getWeightHistory(userId);
+  }
+
   @Get(':userId')
   @ApiOperation({
     summary: 'Get patient dashboard by user ID',
@@ -47,4 +55,6 @@ export class PatientDashboardController {
   ) {
     return this.patientDashboardService.getDashboard(userId);
   }
+
+
 }

@@ -21,14 +21,14 @@ import { PlansService } from './plans.service';
 import { CreateNutritionPlanDto } from './dto/create-plan.dto';
 import { UpdateNutritionPlanDto } from './dto/update-plan.dto';
 import { BuildQueryDto } from 'src/common/dto/base-query.dto';
-import { CurrentUser } from 'src/common/decorators/current-user.decorator';
+import { CurrentUserId } from 'src/common/decorators/current-user.decorator';
 import { UserRole } from 'src/users/enums/roles.enum';
 import { Roles } from 'src/common/decorators/roles.decorator';
 
 
 
 @ApiBearerAuth()
-@Roles(UserRole.ADMIN)
+@Roles(UserRole.ADMIN,UserRole.DOCTOR)
 @ApiTags('Nutrition Plans')
 @Controller('plans')
 export class PlansController {
@@ -40,7 +40,7 @@ export class PlansController {
   @ApiResponse({ status: 201, description: 'Plan created successfully' })
   async create(
     @Body() dto: CreateNutritionPlanDto,
-    @CurrentUser('_id') createdBy: string,
+    @CurrentUserId() createdBy: string,
   ) {
   
     return this.plansService.create(dto, createdBy);
@@ -49,8 +49,7 @@ export class PlansController {
 
   @Get()
   @ApiOperation({ summary: 'Get all nutrition plans' })
-  @ApiQuery({ name: 'page', required: false })
-  @ApiQuery({ name: 'limit', required: false })
+
   async findAll(@Query() query: BuildQueryDto) {
     return this.plansService.findAll(query);
   }
