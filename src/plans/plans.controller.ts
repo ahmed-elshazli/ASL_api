@@ -65,6 +65,17 @@ export class PlansController {
     return this.plansService.findByClient(id, query);
   }
 
+  @Roles(UserRole.PATIENT, UserRole.DOCTOR, UserRole.ADMIN)
+   @Get('/my-plans')
+  @ApiOperation({ summary: 'Get plans for the current user' })
+  @ApiParam({ name: 'id', description: 'Current User ID' })
+  async findPatientplans(
+    @CurrentUserId() id: string,
+    @Query() query: BuildQueryDto,
+  ) {
+    return this.plansService.findByClient(id, query);
+  }
+
 
   @Get('/:id')
   @ApiOperation({ summary: 'Get single nutrition plan' })
