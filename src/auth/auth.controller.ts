@@ -32,7 +32,6 @@ import { ResetPasswordDto } from './dto/reset-password.dto';
 
 
 @ApiTags('Auth')
-
 @Controller('auth')
 @Throttle({ default: { limit: 5, ttl: 60000 } })
 export class AuthController {
@@ -65,7 +64,7 @@ getLoggedUser(@CurrentUserId() userId: string) {
   @ApiBearerAuth()
   @ApiParam({ name: 'id', description: 'User ID' })
   @ApiOkResponse({ description: 'User logged out successfully' })
-  @UseGuards(JwtAuthGuard)
+ 
   @Post('logout/:id')
   async logout(@Param('id') userId: string) {
     return this.authService.logout(userId);
