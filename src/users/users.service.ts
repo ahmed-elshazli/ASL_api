@@ -6,7 +6,6 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
-import { JwtService } from '@nestjs/jwt';
 
 import { USERS_REPOSITORY } from './repositories/users.repository.interface';
 import type { IUsersRepository } from './repositories/users.repository.interface';
@@ -16,8 +15,7 @@ import type { CreateUserDto } from './dto/create-user.dto';
 import type { ChangePasswordDto } from './dto/change-password.dto';
 import { UserResponseDto } from './dto/user-response.dto';
 import { UploadService } from 'src/common/storage/upload.service';
-import { generateTokens } from 'src/common/utils/generate-token';
-import { ConfigService } from '@nestjs/config';
+
 import { AuthResponseDto } from './dto/response.dto';
 import { WeightLogService } from 'src/weight-log/weight-log.service';
 import { AuthSessionService } from 'src/auth/services/auth-session.service';

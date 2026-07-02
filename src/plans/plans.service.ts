@@ -74,7 +74,7 @@ export class PlansService {
 
     const features = new ApiFeatures(baseQuery, query)
       .filter()
-      .search(['title', 'description']);
+      .search(['name', 'type']);
 
     const total = await this.nutritionPlanModel.countDocuments({
       patient: new Types.ObjectId(patientId),
