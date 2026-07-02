@@ -67,15 +67,15 @@ export class UserTrainingProgramController {
     return this.service.deleteUserProgram(userId, programId);
   }
 
-  @ApiOperation({ summary: 'Mark an exercise as completed' })
-@ApiParam({ name: 'programId', type: String })
+@ApiOperation({ summary: 'Mark an exercise as completed' })
+@ApiParam({ name: 'userTrainingProgramId', type: String })
 @Roles(UserRole.PATIENT, UserRole.DOCTOR, UserRole.ADMIN)
-@Patch(':programId/complete-exercise')
+@Patch(':userTrainingProgramId/complete-exercise')
 completeExercise(
-  @Param('programId') programId: string,
+  @Param('userTrainingProgramId') userTrainingProgramId: string,
   @Body() dto: CompleteExerciseDto,
   @CurrentUserId() userId: string,
 ) {
-  return this.service.completeExercise(programId, userId, dto);
+  return this.service.completeExercise(userTrainingProgramId, userId, dto);
 }
 }

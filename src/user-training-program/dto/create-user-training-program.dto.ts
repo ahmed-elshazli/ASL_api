@@ -1,12 +1,14 @@
-import { IsMongoId, IsInt, Min } from 'class-validator';
+import { IsMongoId, IsInt, Min, IsNotEmpty } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 
 export class AssignProgramDto {
   @ApiProperty({ example: '64a7f9b2c3d4e5f6a7b8c9d0' })
+  @IsNotEmpty()
   @IsMongoId()
   userId: string;
 
   @ApiProperty({ example: '64a7f9b2c3d4e5f6a7b8c9d1' })
+  @IsNotEmpty()
   @IsMongoId()
   programId: string;
 

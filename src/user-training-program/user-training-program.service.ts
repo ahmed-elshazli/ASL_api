@@ -129,74 +129,90 @@ async completeExercise(
   userId: string,
   dto: CompleteExerciseDto,
 ) {
+
+
   const program = await this.utpModel.findOne({
-    _id: new Types.ObjectId(programId),
-    userId: new Types.ObjectId(userId),
+    _id:programId,
+    userId:userId.toString(),
     status: UserProgramStatus.ACTIVE,
   });
 
-  if (!program)
-    throw new NotFoundException('Program not found or not active');
 
-  //  Expiry check
+
+  if (!program) {
+    throw new NotFoundException('Program not found or not active');
+  }
+
+  // Program expired
   if (new Date() > program.endDate) {
     program.status = UserProgramStatus.EXPIRED;
     await program.save();
+
     throw new BadRequestException('Program has expired');
   }
 
-  //  prevent duplicate completion
-  const alreadyDone = program.completedExercises.some(
-    (e) => e.exerciseId.toString() === dto.exerciseId,
+  // Prevent duplicate completion in the current round only
+  const alreadyCompleted = program.completedExercises.some(
+    (exercise) =>
+      exercise.exerciseId.equals(dto.exerciseId) &&
+      exercise.round === program.currentRound,
   );
 
-  if (alreadyDone) {
-    throw new BadRequestException('Exercise already completed');
+  if (alreadyCompleted) {
+    throw new BadRequestException(
+      'Exercise already completed in this round',
+    );
   }
 
-  //  add completion event (NO RESET EVER)
+  // Save completion history
   program.completedExercises.push({
     exerciseId: new Types.ObjectId(dto.exerciseId),
+    round: program.currentRound,
     completedAt: new Date(),
   });
 
-  // ================================
-  // 📊 PROGRESS CALCULATION (FIXED)
-  // ================================
-  const totalProgramExercises =
+  // ==========================
+  // Progress
+  // ==========================
+
+  const totalRequiredCompletions =
     program.totalExercises * program.repeatCount;
 
-  const completedSoFar =
-    program.currentRound * program.totalExercises +
-    program.completedExercises.length;
+  const totalCompleted = program.completedExercises.length;
 
   program.progress =
-    totalProgramExercises > 0
-      ? Math.round((completedSoFar / totalProgramExercises) * 100)
-      : 0;
+    totalRequiredCompletions === 0
+      ? 0
+      : Math.round((totalCompleted / totalRequiredCompletions) * 100);
 
-  //  ROUND COMPLETION LOGIC (FIXED)
-  const isRoundCompleted =
-    program.completedExercises.length >= program.totalExercises;
+  // ==========================
+  // Current Round Progress
+  // ==========================
 
-  const isLastRound =
-    program.currentRound >= program.repeatCount - 1;
+  const completedCurrentRound = program.completedExercises.filter(
+    (exercise) => exercise.round === program.currentRound,
+  ).length;
 
-  if (isRoundCompleted && !isLastRound) {
-    program.currentRound += 1;
+  const isCurrentRoundCompleted =
+    completedCurrentRound === program.totalExercises;
 
+  // ==========================
+  // Next Round / Finish Program
+  // ==========================
+
+  if (isCurrentRoundCompleted) {
+    const isLastRound =
+      program.currentRound === program.repeatCount - 1;
+
+    if (isLastRound) {
+      program.status = UserProgramStatus.COMPLETED;
+      program.completedAt = new Date();
+      program.progress = 100;
+    } else {
+      program.currentRound += 1;
+    }
   }
 
-  // ================================
-  // 🏁 FINAL COMPLETION
-  // ================================
-  if (isRoundCompleted && isLastRound) {
-    program.status = UserProgramStatus.COMPLETED;
-    program.completedAt = new Date();
-    program.progress = 100;
-  }
-
-  // 💾 SAVE
   await program.save();
 
   return {
