@@ -28,7 +28,7 @@ import { ParseObjectIdPipe } from '@nestjs/mongoose';
 import { FilesInterceptor } from '@nestjs/platform-express';
 import { CreateUserDto } from './dto/create-user.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
-import { CurrentUser } from 'src/common/decorators/current-user.decorator';
+import {  CurrentUserId } from 'src/common/decorators/current-user.decorator';
 import { UserRole } from './enums/roles.enum';
 import { SkipThrottle } from '@nestjs/throttler';
 
@@ -61,7 +61,7 @@ export class UsersController {
  @Roles(UserRole.ADMIN,UserRole.DOCTOR,UserRole.PATIENT)
   @Patch('change-password')
   async changePassword(
-    @CurrentUser('_id') userId: string,
+     @CurrentUserId() userId: string,
     @Body() dto: ChangePasswordDto,
   ) {
     return this.usersService.changePassword(userId, dto);
@@ -81,10 +81,10 @@ export class UsersController {
   @ApiParam({ name: 'id', description: 'User ID' })
   @ApiOkResponse({ type: UserResponseDto })
   @UseInterceptors(FilesInterceptor('images', 2))
-   
-  @Patch(':id')
+  @Roles(UserRole.ADMIN,UserRole.DOCTOR,UserRole.PATIENT)
+  @Patch('update-profile')
   async update(
-    @Param('id', ParseObjectIdPipe) id: string,
+    @CurrentUserId() id: string,
     @Body() dto: UpdateUserDto,
     @UploadedFiles() files?: Express.Multer.File[],
   ): Promise<UserResponseDto> {
