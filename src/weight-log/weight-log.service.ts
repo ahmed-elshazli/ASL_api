@@ -3,6 +3,7 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 
 import { WeightLog, WeightLogDocument } from './schemas/weight-log.schema';
+import { BuildQueryDto } from 'src/common/dto/base-query.dto';
 
 @Injectable()
 export class WeightLogService {
@@ -37,6 +38,7 @@ export class WeightLogService {
   }
 
   async getLatestWeight(userId: string) {
+    
     return this.weightLogModel
       .findOne({
         userId: this.toObjectId(userId),
