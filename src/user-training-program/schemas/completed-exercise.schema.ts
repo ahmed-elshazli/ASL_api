@@ -10,6 +10,12 @@ export class CompletedExercise {
   })
   exerciseId: Types.ObjectId;
 
+@Prop({
+    required: true,
+    min: 0,
+  })
+  round: number;
+
   @Prop({
     type: Date,
     default: () => new Date(),
