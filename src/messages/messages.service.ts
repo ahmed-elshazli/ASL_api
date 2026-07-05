@@ -6,12 +6,18 @@ import {
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
-import { Message, MessageType } from './schemas/message.schema';
-import { Conversation } from '../conversations/schemas/conversation.schema';
+import {
+  Message,
+  MessageDocument,
+  MessageType,
+} from './schemas/message.schema';
+import {
+  Conversation,
+  ConversationDocument,
+} from '../conversations/schemas/conversation.schema';
 import { SendMessageDto } from './dto/send-message.dto';
 import { BuildQueryDto } from 'src/common/dto/base-query.dto';
 import { ApiFeatures } from 'src/common/utils/api-features';
-import { UploadService } from 'src/common/storage/upload.service';
 
 @Injectable()
 export class MessagesService {
@@ -21,226 +27,182 @@ export class MessagesService {
 
     @InjectModel(Conversation.name)
     private conversationModel: Model<Conversation>,
-     private readonly uploadService: UploadService,
   ) {}
-
-async sendMessage(
-  userId: string,
-  dto: SendMessageDto,
-  file?: Express.Multer.File,
-) {
-
-
-
-  const { conversationId, content } = dto;
-
-  const conversation = await this.conversationModel.findById(
-    conversationId,
-  );
-
-  if (!conversation) {
-    throw new BadRequestException(
-      'Conversation not found',
-    );
-  }
-
-  const isParticipant =
-    conversation.participants.some(
-      (participant: Types.ObjectId) =>
-        participant.toString() === userId.toString(),
+  
+  async sendMessage(
+    userId: string,
+    dto: SendMessageDto,
+  ): Promise<MessageDocument> {
+    const conversation = await this.validateConversation(
+      dto.conversationId,
+      userId,
     );
 
-  if (!isParticipant) {
-    throw new ForbiddenException(
-      'You are not part of this conversation',
+    this.validateMessagePayload(dto);
+
+    const message = await this.createMessage(userId, dto);
+
+    await this.updateConversationAfterMessage(
+      conversation,
+      message._id,
+      userId,
     );
+
+    return message;
   }
 
-
-  if (!content?.trim() && !file) {
-    throw new BadRequestException(
-      'Message content or file is required',
-    );
-  }
-
-  let fileUrl: string | undefined;
-  let type = MessageType.TEXT;
-
-  if (file) {
-    fileUrl =
-      await this.uploadService.uploadChatFile(
-        file,
-      );
-
-    type = file.mimetype.startsWith(
-      'image/',
-    )
-      ? MessageType.IMAGE
-      : MessageType.FILE;
-  }
-
-  const message =
-    await this.messageModel.create({
-      conversationId:
-        new Types.ObjectId(
-          conversationId,
-        ),
-      senderId: new Types.ObjectId(
-        userId,
-      ),
-
-      content: content?.trim(),
-
-      type,
-
-      fileUrl,
-      fileName: file?.originalname,
-      fileSize: file?.size,
-      mimeType: file?.mimetype,
+  async getMessages(userId: string, query: BuildQueryDto) {
+    const conversation = await this.conversationModel.findOne({
+      _id: query.conversationId,
+      participants: new Types.ObjectId(userId),
     });
 
-// Increase unread count for all participants except sender
+    if (!conversation) {
+      throw new ForbiddenException(
+        'You are not allowed to view these messages',
+      );
+    }
 
-const unreadUpdates: Record<string, number> = {};
+    const baseQuery = this.messageModel
+      .find({
+        conversationId: new Types.ObjectId(query.conversationId),
+      })
+      .populate('senderId', 'fullName email');
 
-for (const participant of conversation.participants) {
-  const participantId = participant.toString();
+    const features = new ApiFeatures(baseQuery, query)
+      .filter()
+      .search(['content']);
 
+    const total = await features.count();
 
-  if (participantId === userId.toString()) {
-    continue;
+    features.sort().limitFields().paginate(total);
+
+    const data = await features.exec();
+
+    return {
+      results: data.length,
+      pagination: features.paginationResult,
+      data,
+    };
   }
 
-  unreadUpdates[
-    `unreadCount.${participantId}`
-  ] = 1;
-}
+  async deleteMessage(messageId: string, userId: string) {
+    const message = await this.messageModel.findById(messageId);
 
-await this.conversationModel.findByIdAndUpdate(
-  conversationId,
-  {
-    $inc: unreadUpdates,
+    if (!message) {
+      throw new NotFoundException('Message not found');
+    }
 
-    lastMessage: message._id,
-    lastMessageAt: new Date(),
-  },
-);
-
-  return message;
-}
-
-async getMessages(
-  userId: string,
-  query: BuildQueryDto,
-) {
-  const conversation = await this.conversationModel.findOne({
-    _id: query.conversationId,
-    participants: new Types.ObjectId(userId),
-  });
-
-  if (!conversation) {
-    throw new ForbiddenException(
-      'You are not allowed to view these messages',
-    );
-  }
-
-  const baseQuery = this.messageModel
-    .find({
-      conversationId: new Types.ObjectId(query.conversationId),
-    })
-    .populate('senderId', 'fullName email');
-
-  const features = new ApiFeatures(baseQuery, query)
-    .filter()
-    .search(['content']);
-
-  const total = await features.count();
-
-  features.sort().limitFields().paginate(total);
-
-  const data = await features.exec();
-
-  return {
-    results: data.length,
-    pagination: features.paginationResult,
-    data,
-  };
-}
-
-async deleteMessage(
-  messageId: string,
-  userId: string,
-) {
-  const message = await this.messageModel.findById(
-    messageId,
-  );
-
-  if (!message) {
-    throw new NotFoundException(
-      'Message not found',
-    );
-  }
-
-  const conversation =
-    await this.conversationModel.findById(
+    const conversation = await this.conversationModel.findById(
       message.conversationId,
     );
 
-  if (!conversation) {
-    throw new NotFoundException(
-      'Conversation not found',
-    );
-  }
+    if (!conversation) {
+      throw new NotFoundException('Conversation not found');
+    }
 
-  const isMessageOwner =
-    message.senderId.toString() ===
-    userId.toString();
+    const isMessageOwner = message.senderId.toString() === userId.toString();
 
-  const isGroupOwner =
-    conversation.owner?.toString() ===
-    userId.toString();
+    const isGroupOwner = conversation.owner?.toString() === userId.toString();
 
-  if (!isMessageOwner && !isGroupOwner) {
-    throw new ForbiddenException(
-      'You are not allowed to delete this message',
-    );
-  }
+    if (!isMessageOwner && !isGroupOwner) {
+      throw new ForbiddenException(
+        'You are not allowed to delete this message',
+      );
+    }
 
-  await message.deleteOne();
+    await message.deleteOne();
 
-  // لو الرسالة المحذوفة هي آخر رسالة
-  if (
-    conversation.lastMessage?.toString() ===
-    messageId
-  ) {
-    const lastMessage =
-      await this.messageModel
+    if (conversation.lastMessage?.toString() === messageId) {
+      const lastMessage = await this.messageModel
         .findOne({
-          conversationId:
-            conversation._id,
+          conversationId: conversation._id,
         })
         .sort({
           createdAt: -1,
         });
 
-    await this.conversationModel.findByIdAndUpdate(
-      conversation._id,
-      {
-        lastMessage:
-          lastMessage?._id ?? null,
+      await this.conversationModel.findByIdAndUpdate(conversation._id, {
+        lastMessage: lastMessage?._id ?? null,
 
-        lastMessageAt:
-          lastMessage?.createdAt ??
-          null,
-      },
-    );
+        lastMessageAt: lastMessage?.createdAt ?? null,
+      });
+    }
+    message.isDeleted = true;
+    await message.save();
+
+    return {
+      message: 'Message deleted successfully',
+    };
   }
 
-  return {
-    message:
-      'Message deleted successfully',
-  };
-}
+  private async validateConversation(
+    conversationId: string,
+    userId: string,
+  ): Promise<ConversationDocument> {
+    const conversation = await this.conversationModel.findById(conversationId);
 
+    if (!conversation) {
+      throw new NotFoundException('Conversation not found');
+    }
 
+    const isParticipant = conversation.participants.some(
+      (participant) => participant.toString() === userId,
+    );
+
+    if (!isParticipant) {
+      throw new ForbiddenException('You are not part of this conversation');
+    }
+
+    return conversation;
+  }
+
+  private async createMessage(
+    userId: string,
+    dto: SendMessageDto,
+  ): Promise<MessageDocument> {
+    return this.messageModel.create({
+      conversationId: new Types.ObjectId(dto.conversationId),
+      senderId: new Types.ObjectId(userId),
+
+      content: dto.content?.trim(),
+
+      type: dto.type ?? MessageType.TEXT,
+
+      fileUrl: dto.fileUrl,
+      fileName: dto.fileName,
+      fileSize: dto.fileSize,
+      mimeType: dto.mimeType,
+    });
+  }
+
+  private async updateConversationAfterMessage(
+    conversation: ConversationDocument,
+    messageId: Types.ObjectId,
+    senderId: string,
+  ): Promise<void> {
+    const unreadUpdates: Record<string, number> = {};
+
+    for (const participant of conversation.participants) {
+      const participantId = participant.toString();
+
+      if (participantId === senderId) {
+        continue;
+      }
+
+      unreadUpdates[`unreadCount.${participantId}`] = 1;
+    }
+
+    await this.conversationModel.findByIdAndUpdate(conversation._id, {
+      $inc: unreadUpdates,
+      lastMessage: messageId,
+      lastMessageAt: new Date(),
+    });
+  }
+
+  private validateMessagePayload(dto: SendMessageDto): void {
+    if (!dto.content?.trim() && !dto.fileUrl) {
+      throw new BadRequestException('Message content or file is required');
+    }
+  }
 }

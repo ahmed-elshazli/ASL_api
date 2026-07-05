@@ -78,9 +78,8 @@ export class UsersController {
   }
 
   @ApiOperation({ summary: 'Update user' })
-  @ApiParam({ name: 'id', description: 'User ID' })
   @ApiOkResponse({ type: UserResponseDto })
-  @UseInterceptors(FilesInterceptor('images', 2))
+  @UseInterceptors(FilesInterceptor('images', 1))
   @Roles(UserRole.ADMIN,UserRole.DOCTOR,UserRole.PATIENT)
   @Patch('update-profile')
   async update(

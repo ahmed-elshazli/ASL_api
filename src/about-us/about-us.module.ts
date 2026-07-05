@@ -7,7 +7,7 @@ import {
   AboutUs,
   AboutUsSchema,
 } from './schema/about-us.schema';
-import { UploadService } from 'src/common/storage/upload.service';
+import { StorageModule } from 'src/common/storage/storage.module';
 
 @Module({
   imports: [
@@ -17,10 +17,11 @@ import { UploadService } from 'src/common/storage/upload.service';
         schema: AboutUsSchema,
       },
     ]),
+    StorageModule,
    
   ],
   controllers: [AboutUsController],
-  providers: [AboutUsService,UploadService],
+  providers: [AboutUsService],
   exports: [AboutUsService],
 })
 export class AboutUsModule {}

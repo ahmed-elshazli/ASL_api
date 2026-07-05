@@ -7,6 +7,7 @@ import { UploadProcessor } from './upload.processor';
 
 import { Exercise, ExerciseSchema } from '../exercises/schemas/exercise.schema';
 import { UploadService } from 'src/common/storage/upload.service';
+import { StorageModule } from 'src/common/storage/storage.module';
 
 @Module({
   imports: [
@@ -17,8 +18,9 @@ import { UploadService } from 'src/common/storage/upload.service';
     MongooseModule.forFeature([
       { name: Exercise.name, schema: ExerciseSchema },
     ]),
+    StorageModule,
   ],
-  providers: [UploadQueueService, UploadProcessor,UploadService],
+  providers: [UploadQueueService, UploadProcessor],
   exports: [UploadQueueService],
 })
 export class UploadQueueModule {}

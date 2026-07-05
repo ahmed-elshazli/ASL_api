@@ -4,23 +4,17 @@ import { JwtModule } from '@nestjs/jwt';
 
 import { ChatGateway } from './chat.gateway';
 
-import {
-  Message,
-  MessageSchema,
-} from '../messages/schemas/message.schema';
+import { Message, MessageSchema } from '../messages/schemas/message.schema';
 
 import {
   Conversation,
   ConversationSchema,
 } from '../conversations/schemas/conversation.schema';
 
-import {
-  User,
-  UserSchema,
-} from '../users/schema/users.schema';
+import { User, UserSchema } from '../users/schema/users.schema';
 
-import { MessagesService } from '../messages/messages.service';
-import { UploadService } from '../common/storage/upload.service';
+import { MessagesModule } from 'src/messages/messages.module';
+import { StorageModule } from 'src/common/storage/storage.module';
 
 @Module({
   imports: [
@@ -40,13 +34,11 @@ import { UploadService } from '../common/storage/upload.service';
         schema: UserSchema,
       },
     ]),
+    MessagesModule,
+    StorageModule,
   ],
 
-  providers: [
-    ChatGateway,
-    MessagesService,
-    UploadService,
-  ],
+  providers: [ChatGateway],
 
   exports: [ChatGateway],
 })

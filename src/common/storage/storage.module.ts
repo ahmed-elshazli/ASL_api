@@ -2,6 +2,7 @@ import { Module, Global } from '@nestjs/common';
 import { CloudinaryProvider } from './providers/cloudinary.provider';
 import { StorageService } from './storage.service';
 import { ExistsValidator } from '../validators/id-exists.validator';
+import { UploadService } from './upload.service';
 
 @Global()
 @Module({
@@ -11,8 +12,9 @@ import { ExistsValidator } from '../validators/id-exists.validator';
       useClass: CloudinaryProvider,
     },
     StorageService,
-    ExistsValidator
+    ExistsValidator,
+    UploadService
   ],
-  exports: [StorageService],
+  exports: [StorageService,UploadService],
 })
 export class StorageModule {}
