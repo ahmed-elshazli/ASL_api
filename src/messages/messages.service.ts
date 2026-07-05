@@ -111,7 +111,12 @@ export class MessagesService {
       );
     }
 
-    await message.deleteOne();
+   // Soft Delete
+  message.isDeleted = true;
+  message.deletedAt = new Date();
+  message.deletedBy = new Types.ObjectId(userId);
+
+  await message.save();
 
     if (conversation.lastMessage?.toString() === messageId) {
       const lastMessage = await this.messageModel
@@ -128,7 +133,7 @@ export class MessagesService {
         lastMessageAt: lastMessage?.createdAt ?? null,
       });
     }
-    message.isDeleted = true;
+    
     await message.save();
 
     return {

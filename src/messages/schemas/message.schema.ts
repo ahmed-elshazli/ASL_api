@@ -46,8 +46,22 @@ export class Message {
  @Prop({ default: Date.now})
   createdAt: Date;
 
-  @Prop({default:false})
-  isDeleted: boolean;
+ @Prop({
+  default: false,
+})
+isDeleted: boolean;
+
+@Prop({
+  default: null,
+})
+deletedAt?: Date;
+
+@Prop({
+  type: Types.ObjectId,
+  ref: 'User',
+  default: null,
+})
+deletedBy?: Types.ObjectId;
 }
 export const MessageSchema = SchemaFactory.createForClass(Message);
 MessageSchema.index({ conversationId: 1, createdAt: -1 });
