@@ -22,24 +22,27 @@ import { MessagesService } from './messages.service';
 import { SendMessageDto } from './dto/send-message.dto';
 import { BuildQueryDto } from 'src/common/dto/base-query.dto';
 import { CurrentUserId } from 'src/common/decorators/current-user.decorator';
+import { UploadService } from 'src/common/storage/upload.service';
 
 @ApiTags('Messages')
 @ApiBearerAuth()
 @Controller('messages')
 export class MessagesController {
-  constructor(private readonly messagesService: MessagesService) {}
+  constructor(private readonly messagesService: MessagesService,
+    private readonly uploadService: UploadService,
+  ) {}
 
-  @Post()
+  @Post('upload')
   @UseInterceptors(FileInterceptor('file'))
   @ApiOperation({ summary: 'Send a message with an optional file attachment' })
   @ApiConsumes('multipart/form-data')
 
   sendMessage(
-    @Body() dto: SendMessageDto,
+  
     @UploadedFile() file: Express.Multer.File,
-    @CurrentUserId() userId: string,
+   
   ) {
-    return this.messagesService.sendMessage(userId, dto, file);
+    return this.uploadService.uploadChatFile(file);
   }
 
   @Get()

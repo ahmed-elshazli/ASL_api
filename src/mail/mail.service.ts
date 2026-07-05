@@ -1,33 +1,40 @@
-import { Injectable } from '@nestjs/common';
-import { MailerService } from '@nestjs-modules/mailer';
+import {
+  Injectable,
+  InternalServerErrorException,
+} from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import { Resend } from 'resend';
 
 @Injectable()
 export class MailService {
-  constructor(
-    private readonly mailerService: MailerService,
-  ) {}
-
-  async sendResetPasswordEmail(
-    email: string,
-    fullName: string,
-    code: string,
+  private readonly resend: Resend;
+  constructor(private readonly configService: ConfigService) {
+    this.resend = new Resend(this.configService.getOrThrow<string>('RESEND_API_KEY'));
+  }
+  async sendResetPasswordEmail( 
+      email: string,
+      fullName: string,
+      resetCode: string,
   ): Promise<void> {
-    await this.mailerService.sendMail({
+    const { error } = await this.resend.emails.send({
+      from: this.configService.getOrThrow('MAIL_FROM'),
       to: email,
-
-      subject: 'Password Reset',
-
+      subject: 'Reset Password',
       html: `
         <h2>Hello ${fullName}</h2>
 
-        <p>You requested to reset your password.</p>
+        <p>Your password reset code is:</p>
+        <h1>${resetCode}</h1>
 
-        <h1>${code}</h1>
-
-        <p>This code expires in 10 minutes.</p>
-
-        <p>If you didn't request this, please ignore this email.</p>
+        <p>This code will expire in 10 minutes.</p>
+        <p>If you didn't request this, you can ignore this email.</p>
       `,
     });
+
+    if (error) {
+      throw new InternalServerErrorException(
+        'Failed to send email.',
+      );
+    }
   }
 }

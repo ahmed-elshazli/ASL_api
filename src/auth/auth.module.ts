@@ -15,6 +15,7 @@ import { USERS_REPOSITORY } from 'src/users/repositories/users.repository.interf
 import { MailModule } from 'src/mail/mail.module';
 import { TokenService } from './services/token.service';
 import { AuthSessionService } from './services/auth-session.service';
+import { StorageModule } from 'src/common/storage/storage.module';
 
 @Module({
   imports: [
@@ -39,11 +40,12 @@ import { AuthSessionService } from './services/auth-session.service';
     }),
 
     MailModule,
+    StorageModule,
   ],
 
   controllers: [AuthController],
 
-  providers: [AuthService, JwtStrategy,UploadService, UsersRepository,TokenService,AuthSessionService,
+  providers: [AuthService, JwtStrategy,UsersRepository,TokenService,AuthSessionService,
      {
       provide: USERS_REPOSITORY,  
       useClass: UsersRepository,

@@ -4,7 +4,9 @@ import { MessagesController } from './messages.controller';
 import { MongooseModule } from '@nestjs/mongoose';
 import { Conversation, ConversationSchema } from 'src/conversations/schemas/conversation.schema';
 import { Message, MessageSchema } from './schemas/message.schema';
-import { UploadService } from 'src/common/storage/upload.service';
+
+import { StorageModule } from 'src/common/storage/storage.module';
+
 
 @Module({
     imports: [
@@ -19,8 +21,11 @@ import { UploadService } from 'src/common/storage/upload.service';
         schema: ConversationSchema,
       },
     ]),
+    StorageModule,
+   
   ],
   controllers: [MessagesController],
-  providers: [MessagesService,UploadService],
+  providers: [MessagesService],
+  exports: [MessagesService],
 })
 export class MessagesModule {}

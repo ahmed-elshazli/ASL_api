@@ -1,7 +1,12 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
 import { StorageService } from './storage.service';
 import { ALLOWED_IMAGE_TYPES } from './constants/allowed-file-types.constant';
-
+export interface UploadChatFileResponse {
+  fileUrl: string;
+  fileName: string;
+  fileSize: number;
+  mimeType: string;
+}
 @Injectable()
 export class UploadService {
   constructor(private readonly storageService: StorageService) {}
@@ -73,19 +78,26 @@ export class UploadService {
     return relevantParts.join('/').replace(/\.[^/.]+$/, '');
   }
 
-  async uploadChatFile(
+async uploadChatFile(
   file: Express.Multer.File,
-): Promise<string> {
+): Promise<UploadChatFileResponse> {
   if (!file) {
     throw new BadRequestException('File is required');
   }
 
-  return this.storageService.uploadSingle(
+  const fileUrl = await this.storageService.uploadSingle(
     file,
     'messages',
     {
-      allowedTypes: ALLOWED_IMAGE_TYPES ,
+      allowedTypes: ALLOWED_IMAGE_TYPES,
     },
   );
+
+  return {
+    fileUrl,
+    fileName: file.originalname,
+    fileSize: file.size,
+    mimeType: file.mimetype,
+  };
 }
 }

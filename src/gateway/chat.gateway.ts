@@ -20,6 +20,8 @@ import { Model, Types } from 'mongoose';
 import { MessagesService } from '../messages/messages.service';
 import { Conversation } from '../conversations/schemas/conversation.schema';
 import { User } from '../users/schema/users.schema';
+import { MessageType } from 'src/messages/schemas/message.schema';
+import { SendMessageDto } from 'src/messages/dto/send-message.dto';
 
 @WebSocketGateway({
   cors: {
@@ -204,28 +206,19 @@ export class ChatGateway
   @SubscribeMessage('sendMessage')
   async handleSendMessage(
     @ConnectedSocket() client: Socket,
-    @MessageBody()
-    payload: {
-      conversationId: string;
-      content: string;
-    },
+    @MessageBody() payload: SendMessageDto,
+   
   ) {
-    if (!payload?.conversationId || !payload?.content?.trim()) {
-      throw new WsException('conversationId and content are required');
-    }
+
 
     const userId = this.getUserId(client);
 
-    const message = await this.messagesService.sendMessage(userId, {
-      conversationId: payload.conversationId,
-      content: payload.content,
-    });
+    const message = await this.messagesService.sendMessage(userId,payload);
 
     this.server.to(payload.conversationId).emit('newMessage', message);
 
     return message;
   }
-
   // =========================
   // TYPING
   // =========================

@@ -45,6 +45,9 @@ export class Message {
   mimeType?: string;
  @Prop({ default: Date.now})
   createdAt: Date;
+
+  @Prop({default:false})
+  isDeleted: boolean;
 }
 export const MessageSchema = SchemaFactory.createForClass(Message);
 MessageSchema.index({ conversationId: 1, createdAt: -1 });
