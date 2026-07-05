@@ -3,8 +3,8 @@ import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 
 export function setupSwagger(app: INestApplication) {
   const config = new DocumentBuilder()
-    .setTitle(' API Documentation')
-    .setDescription('Real Estate System API')
+    .setTitle(' ASL Platform API')
+    .setDescription('API documentation for the ASL Platform' )
     .setVersion('1.0')
     .addBearerAuth()
     .build();
