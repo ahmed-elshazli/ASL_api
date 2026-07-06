@@ -29,6 +29,7 @@ import { PaymobModule } from './paymob/paymob.module';
 import { ReviewsModule } from './review/review.module';
 import { AboutUsModule } from './about-us/about-us.module';
 import { MailModule } from './mail/mail.module';
+import { PaymentMethodsModule } from './payment-methods/payment-methods.module';
 
 @Module({
   imports: [
@@ -106,6 +107,7 @@ import { MailModule } from './mail/mail.module';
     ReviewsModule,
     AboutUsModule,
     MailModule,
+    PaymentMethodsModule,
   ],
 
   providers: [
