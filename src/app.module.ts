@@ -30,6 +30,7 @@ import { ReviewsModule } from './review/review.module';
 import { AboutUsModule } from './about-us/about-us.module';
 import { MailModule } from './mail/mail.module';
 import { PaymentMethodsModule } from './payment-methods/payment-methods.module';
+import { ResultsModule } from './results/results.module';
 
 @Module({
   imports: [
@@ -108,6 +109,7 @@ import { PaymentMethodsModule } from './payment-methods/payment-methods.module';
     AboutUsModule,
     MailModule,
     PaymentMethodsModule,
+    ResultsModule,
   ],
 
   providers: [
