@@ -103,7 +103,7 @@ import { ResultsModule } from './results/results.module';
     MessagesModule,
     ChatModule,
     SubscriptionPlanModule,
-    // UserSubscriptionModule,
+    UserSubscriptionModule,
     PaymobModule,
     ReviewsModule,
     AboutUsModule,

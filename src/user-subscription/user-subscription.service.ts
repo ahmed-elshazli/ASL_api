@@ -1,88 +1,161 @@
 import {
+  BadRequestException,
   ConflictException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model, Types } from 'mongoose';
+import { Model } from 'mongoose';
 
 import {
-  UserSubscription,
-  UserSubscriptionDocument,
-  SubscriptionStatus,
+ Subscription,
+  SubscriptionDocument,
 } from './schema/user-subscription.schema';
 
 import {
   SubscriptionPlan,
   SubscriptionPlanDocument,
 } from 'src/subscription-plan/schema/subscription-plan.schema';
-
-import { PaymobService } from 'src/paymob/paymob.service';
+import { SubscriptionStatus } from './enums/subscription-status.enum';
+import { CreateSubscriptionDto } from './dto/create-user-subscription.dto';
+import { BuildQueryDto } from 'src/common/dto/base-query.dto';
+import { ApiFeatures } from 'src/common/utils/api-features';
+import { Type } from 'class-transformer';
 
 @Injectable()
-export class UserSubscriptionService {
+export class SubscriptionService {
   constructor(
-    @InjectModel(UserSubscription.name)
-    private readonly subscriptionModel: Model<UserSubscriptionDocument>,
+    @InjectModel(Subscription.name)
+    private readonly subscriptionModel: Model<SubscriptionDocument>,
 
     @InjectModel(SubscriptionPlan.name)
-    private readonly planModel: Model<SubscriptionPlanDocument>,
-
-    private readonly paymobService: PaymobService,
+    private readonly subscriptionPlanModel: Model<SubscriptionPlanDocument>,
   ) {}
 
+  async createSubscription(doctorId: string, dto: CreateSubscriptionDto) {
 
-  async checkout(
-  user: any,
-  planId: string,
-) {
-  // 1) Check if plan exists
-  const plan = await this.planModel.findById(planId);
 
-  if (!plan) {
-    throw new NotFoundException('Subscription plan not found');
-  }
+    const plan = await this.subscriptionPlanModel.findById(dto.planId);
 
-  // 2) Check active subscription
-  const activeSubscription =
-    await this.subscriptionModel.findOne({
-      userId: user._id,
+    if (!plan) {
+      throw new NotFoundException('Subscription plan not found.');
+    }
+    const activeSubscription = await this.subscriptionModel.findOne({
+      user: dto.userId,
       status: SubscriptionStatus.ACTIVE,
-      endDate: {
-        $gt: new Date(),
-      },
+    });
+    if (activeSubscription) {
+      throw new ConflictException('User already has an active subscription.');
+    }
+
+  
+
+    const startDate = new Date();
+
+    const endDate = new Date(startDate);
+
+    endDate.setDate(endDate.getDate() + plan.durationInDays);
+
+    const subscription = await this.subscriptionModel.create({
+      user: dto.userId,
+      plan: plan._id,
+      startDate,
+      endDate,
+      approvedBy: doctorId,
+      status: SubscriptionStatus.ACTIVE,
     });
 
-  if (activeSubscription) {
-    throw new ConflictException(
-      'You already have an active subscription',
-    );
+    return subscription.populate('plan');
   }
 
-  // 3) Create payment
-const payment = await this.paymobService.checkout(plan, user);
 
-  // 4) Save pending subscription
-  await this.subscriptionModel.create({
-    userId: user._id,
+  async getCurrentSubscription(userId: string) {
+  const subscription = await this.subscriptionModel
+    .findOne({
+      user: userId.toString(),
+      status: SubscriptionStatus.ACTIVE,
+    })
+    .populate('plan')
+    .populate('approvedBy', 'fullName role').lean();
 
-    planId: plan._id,
+  if (!subscription) {
+    throw new NotFoundException('No active subscription found.');
+  }
 
-    amount: plan.price,
+  return subscription;
+}
 
-    currency: plan.currency,
 
-    paymentGateway: 'paymob',
+async getSubscriptionHistory(userId: string) {
+  return this.subscriptionModel
+    .find({
+      user: userId.toString(),
+    })
+    .populate('plan')
+    .populate('approvedBy', 'fullName role')
+    .sort({
+      createdAt: -1,
+    }).lean();
+}
 
-    paymentReference:
-      payment.reference,
 
-    status: SubscriptionStatus.PENDING,
-  });
+async getAllSubscriptions(query:BuildQueryDto) {
+const baseQuery= this.subscriptionModel
+    .find()
+    .populate('user', 'fullName email phone')
+    .populate('plan','name price durationInDays ')
+    .populate('approvedBy', 'fullName role').lean()
 
-  // 5) Return payment url
-  return {
-    paymentUrl: payment.paymentUrl,
-  };
+     const features = new ApiFeatures(baseQuery, query)
+          .filter()
+          
+    
+      
+          const total = await features.count();
+    
+        features.sort().limitFields().paginate(total);
+    
+        const data = await features.exec();
+    
+        return {
+          results: data.length,
+          pagination: features.paginationResult,
+          data,
+        };
+  
+}
+
+async cancelSubscription(subscriptionId: string) {
+  const subscription =
+    await this.subscriptionModel.findById(subscriptionId);
+
+  if (!subscription) {
+    throw new NotFoundException('Subscription not found.');
+  }
+
+  subscription.status = SubscriptionStatus.CANCELLED;
+
+  await subscription.save();
+
+  return subscription;
+}
+
+async expireSubscriptions() {
+  const result =
+    await this.subscriptionModel.updateMany(
+      {
+        status: SubscriptionStatus.ACTIVE,
+        endDate: {
+          $lte: new Date(),
+        },
+      },
+      {
+        $set: {
+          status: SubscriptionStatus.EXPIRED,
+        },
+      },
+    );
+
+  return result.modifiedCount;
 }
 }

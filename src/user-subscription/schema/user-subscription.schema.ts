@@ -1,84 +1,68 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { HydratedDocument, Types } from 'mongoose';
-import { SubscriptionPlan } from 'src/subscription-plan/schema/subscription-plan.schema';
+
+import { SubscriptionStatus } from '../enums/subscription-status.enum';
 import { User } from 'src/users/schema/users.schema';
+import { SubscriptionPlan } from 'src/subscription-plan/schema/subscription-plan.schema';
 
-export type UserSubscriptionDocument =
-  HydratedDocument<UserSubscription>;
-
-export enum SubscriptionStatus {
-  PENDING = 'pending',
-  ACTIVE = 'active',
-  FAILED = 'failed',
-  EXPIRED = 'expired',
-}
+export type SubscriptionDocument =
+  HydratedDocument<Subscription>;
 
 @Schema({
   timestamps: true,
   versionKey: false,
 })
-export class UserSubscription {
+export class Subscription {
   @Prop({
     type: Types.ObjectId,
     ref: User.name,
     required: true,
+    index: true,
   })
-  userId: Types.ObjectId;
+  user: Types.ObjectId;
 
   @Prop({
     type: Types.ObjectId,
     ref: SubscriptionPlan.name,
     required: true,
   })
-  planId: Types.ObjectId;
+  plan: Types.ObjectId;
 
   @Prop({
     required: true,
   })
-  amount: number;
+  startDate: Date;
 
   @Prop({
     required: true,
+    index: true,
   })
-  currency: string;
+  endDate: Date;
 
   @Prop({
     enum: SubscriptionStatus,
-    default: SubscriptionStatus.PENDING,
+    default: SubscriptionStatus.ACTIVE,
+    index: true,
   })
   status: SubscriptionStatus;
 
-  @Prop()
-  paymentGateway: string;
-
-  @Prop()
-  transactionId: string;
-
-  @Prop()
-  paymentReference: string;
-
-  @Prop()
-  paidAt: Date;
-
-  @Prop()
-  startDate: Date;
-
-  @Prop()
-  endDate: Date;
+  @Prop({
+    type: Types.ObjectId,
+    ref: User.name,
+    required: true,
+  })
+  approvedBy: Types.ObjectId;
 }
 
-export const UserSubscriptionSchema =
-  SchemaFactory.createForClass(UserSubscription);
+export const SubscriptionSchema =
+  SchemaFactory.createForClass(Subscription);
 
-UserSubscriptionSchema.index({
-  userId: 1,
+  SubscriptionSchema.index({
+  user: 1,
   status: 1,
 });
 
-UserSubscriptionSchema.index({
-  planId: 1,
-});
-
-UserSubscriptionSchema.index({
-  paymentReference: 1,
+SubscriptionSchema.index({
+  endDate: 1,
+  status: 1,
 });
