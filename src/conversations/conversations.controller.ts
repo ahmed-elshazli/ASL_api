@@ -28,7 +28,7 @@ import { CurrentUserId } from 'src/common/decorators/current-user.decorator';
 @ApiBearerAuth()
 @Controller('conversations')
 export class ConversationsController {
-  constructor(private readonly conversationsService: ConversationsService) {}
+  constructor(private readonly conversationsService: ConversationsService) { }
 
   @Post()
   @ApiOperation({ summary: 'Create a new conversation' })
@@ -140,14 +140,14 @@ export class ConversationsController {
   }
 
 
-@Patch(':id/read')
-markAsRead(
-  @Param('id') conversationId: string,
-  @CurrentUserId() userId: string,
-) {
-  return this.conversationsService.markAsRead(
-    conversationId,
-    userId,
-  );
-}
+  @Patch(':id/read')
+  markAsRead(
+    @Param('id') conversationId: string,
+    @CurrentUserId() userId: string,
+  ) {
+    return this.conversationsService.markAsRead(
+      conversationId,
+      userId,
+    );
+  }
 }

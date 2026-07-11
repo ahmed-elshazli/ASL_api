@@ -60,7 +60,7 @@ export class GlobalExceptionFilter implements ExceptionFilter {
 
     this.logger.error(
       `[${request.method}] ${request.url} - ${status}: ${JSON.stringify(message)}`,
-      exception instanceof Error ? exception.stack : '',
+
     );
 
     response.status(status).json({
