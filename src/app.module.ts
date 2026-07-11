@@ -31,6 +31,7 @@ import { AboutUsModule } from './about-us/about-us.module';
 import { MailModule } from './mail/mail.module';
 import { PaymentMethodsModule } from './payment-methods/payment-methods.module';
 import { ResultsModule } from './results/results.module';
+import { AdminDashboardModule } from './admin-dashboard/admin-dashboard.module';
 
 @Module({
   imports: [
@@ -110,6 +111,7 @@ import { ResultsModule } from './results/results.module';
     MailModule,
     PaymentMethodsModule,
     ResultsModule,
+    AdminDashboardModule,
   ],
 
   providers: [

@@ -7,6 +7,7 @@ import { BCRYPT_ROUNDS } from 'src/common/constants/security.constants';
 export type UserDocument = HydratedDocument<User>;
 
 @Schema({
+   timestamps:true,
   versionKey: false,
 
 })
@@ -82,6 +83,9 @@ export class User {
 }
 
 export const UserSchema = SchemaFactory.createForClass(User);
+UserSchema.index({
+ createdAt: -1
+});
 
 UserSchema.pre<UserDocument>('save', async function () {
   if (!this.isModified('password')) return;

@@ -52,6 +52,8 @@ export class Subscription {
     required: true,
   })
   approvedBy: Types.ObjectId;
+  @Prop()
+createdAt: Date;
 }
 
 export const SubscriptionSchema =
