@@ -23,7 +23,7 @@ export class UploadService {
 
     return this.storageService.uploadMultiple(
       files,
-      'locations',
+      'images',
       { allowedTypes: ALLOWED_IMAGE_TYPES },
     );
   }
@@ -36,7 +36,7 @@ export class UploadService {
 
     return this.storageService.uploadSingle(
       file,
-      'locations',
+      'images',
       { allowedTypes: ALLOWED_IMAGE_TYPES },
     );
   }

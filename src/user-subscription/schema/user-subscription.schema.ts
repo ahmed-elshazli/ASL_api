@@ -4,9 +4,9 @@ import { HydratedDocument, Types } from 'mongoose';
 import { SubscriptionStatus } from '../enums/subscription-status.enum';
 import { User } from 'src/users/schema/users.schema';
 import { SubscriptionPlan } from 'src/subscription-plan/schema/subscription-plan.schema';
+import { PaymentMethod } from 'src/payment-methods/schemas/payment-method.schema';
 
-export type SubscriptionDocument =
-  HydratedDocument<Subscription>;
+export type SubscriptionDocument = HydratedDocument<Subscription>;
 
 @Schema({
   timestamps: true,
@@ -29,19 +29,35 @@ export class Subscription {
   plan: Types.ObjectId;
 
   @Prop({
-    required: true,
+  type:String,
+   
   })
-  startDate: Date;
+  paymentMethod: string;
 
   @Prop({
-    required: true,
+   type: String,
+    trim: true,
+  })
+  senderNumber: string;
+
+
+
+  @Prop({
+   type: String,
+  })
+  paymentScreenshot: string;
+
+  @Prop()
+  startDate?: Date;
+
+  @Prop({
     index: true,
   })
-  endDate: Date;
+  endDate?: Date;
 
   @Prop({
     enum: SubscriptionStatus,
-    default: SubscriptionStatus.ACTIVE,
+    default: SubscriptionStatus.PENDING,
     index: true,
   })
   status: SubscriptionStatus;
@@ -49,17 +65,24 @@ export class Subscription {
   @Prop({
     type: Types.ObjectId,
     ref: User.name,
-    required: true,
   })
-  approvedBy: Types.ObjectId;
+  approvedBy?: Types.ObjectId;
+
   @Prop()
-createdAt: Date;
+  reviewedAt?: Date;
+
+  @Prop({
+    trim: true,
+  })
+  rejectReason?: string;
+
+  @Prop()
+  createdAt: Date;
 }
 
-export const SubscriptionSchema =
-  SchemaFactory.createForClass(Subscription);
+export const SubscriptionSchema = SchemaFactory.createForClass(Subscription);
 
-  SubscriptionSchema.index({
+SubscriptionSchema.index({
   user: 1,
   status: 1,
 });
@@ -67,4 +90,13 @@ export const SubscriptionSchema =
 SubscriptionSchema.index({
   endDate: 1,
   status: 1,
+});
+
+SubscriptionSchema.index({
+  status: 1,
+  createdAt: -1,
+});
+
+SubscriptionSchema.index({
+  approvedBy: 1,
 });
