@@ -12,10 +12,11 @@ import {
   SubscriptionPlanSchema,
 } from 'src/subscription-plan/schema/subscription-plan.schema';
 import { SubscriptionCron } from './cron/subscription.cron';
+import { StorageModule } from 'src/common/storage/storage.module';
 
 @Module({
   imports: [
-     ScheduleModule.forRoot(),
+    ScheduleModule.forRoot(),
     MongooseModule.forFeature([
       {
         name: Subscription.name,
@@ -26,6 +27,8 @@ import { SubscriptionCron } from './cron/subscription.cron';
         schema: SubscriptionPlanSchema,
       },
     ]),
+
+    StorageModule,
   ],
   controllers: [SubscriptionController],
   providers: [SubscriptionService,SubscriptionCron],
