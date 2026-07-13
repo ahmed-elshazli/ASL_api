@@ -67,7 +67,10 @@ export class SubscriptionService {
       status: SubscriptionStatus.PENDING,
     });
 
-    return subscription.populate('plan');
+    return subscription.populate([
+      { path: 'plan' },
+      { path: 'paymentMethod', select: 'name type accountName accountNumber instructions' },
+    ]);
   }
 
   async createSubscriptionByDoctor(
@@ -140,7 +143,9 @@ export class SubscriptionService {
       .findOne({
         user: userId.toString(),
       })
+      .sort({ createdAt: -1 })
       .populate('plan')
+      .populate('paymentMethod', 'name type accountName accountNumber instructions')
       .populate('approvedBy', 'fullName role')
       .lean();
 
@@ -156,6 +161,7 @@ export class SubscriptionService {
       .find({ status: SubscriptionStatus.PENDING })
       .populate('user', 'fullName email phone')
       .populate('plan', 'name price durationInDays')
+      .populate('paymentMethod', 'name type accountName accountNumber instructions')
       .lean();
 
     const features = new ApiFeatures(baseQuery, query).filter();
@@ -181,6 +187,7 @@ export class SubscriptionService {
       .find()
       .populate('user', 'fullName email phone')
       .populate('plan', 'name price durationInDays ')
+      .populate('paymentMethod', 'name type accountName accountNumber instructions')
       .populate('approvedBy', 'fullName role')
       .lean();
 
