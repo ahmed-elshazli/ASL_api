@@ -271,6 +271,22 @@ export class SubscriptionService {
     return subscription;
   }
 
+  async cancelMySubscription(userId: string) {
+    const subscription = await this.subscriptionModel.findOne({
+      user: userId.toString(),
+      status: SubscriptionStatus.ACTIVE,
+    });
+
+    if (!subscription) {
+      throw new NotFoundException('No active subscription to cancel.');
+    }
+
+    subscription.status = SubscriptionStatus.CANCELLED;
+    await subscription.save();
+
+    return subscription;
+  }
+
   async expireSubscriptions() {
     const result = await this.subscriptionModel.updateMany(
       {

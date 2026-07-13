@@ -102,6 +102,15 @@ export class SubscriptionController {
   ) {
     return this.subscriptionService.rejectSubscription(doctorId, dto);
   }
+  @Roles(UserRole.PATIENT)
+  @Patch('me/cancel')
+  @ApiOperation({
+    summary: 'Patient cancels their own active subscription',
+  })
+  cancelMySubscription(@CurrentUserId() userId: string) {
+    return this.subscriptionService.cancelMySubscription(userId);
+  }
+
   @Patch(':id/cancel')
   @ApiOperation({
     summary: 'Cancel subscription',
