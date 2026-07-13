@@ -186,6 +186,13 @@ export class SubscriptionService {
       .lean();
 
     if (!subscription) {
+      const anyDocsForUser = await this.subscriptionModel.countDocuments({
+        user: userId.toString(),
+      });
+      const totalDocs = await this.subscriptionModel.estimatedDocumentCount();
+      console.warn(
+        `[getCurrentSubscription] no match for userId=${userId} (type=${typeof userId}) — countForUser=${anyDocsForUser}, totalSubscriptions=${totalDocs}`,
+      );
       throw new NotFoundException('No active subscription found.');
     }
 
