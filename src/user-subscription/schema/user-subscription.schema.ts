@@ -29,10 +29,10 @@ export class Subscription {
   plan: Types.ObjectId;
 
   @Prop({
-  type:String,
-   
+    type: Types.ObjectId,
+    ref: PaymentMethod.name,
   })
-  paymentMethod: string;
+  paymentMethod: Types.ObjectId;
 
   @Prop({
    type: String,

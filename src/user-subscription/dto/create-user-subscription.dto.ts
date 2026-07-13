@@ -12,7 +12,7 @@ export class CreateSubscriptionDto {
   planId: string;
 
   @ApiProperty({ description: 'Payment method' })
-  @IsString()
+  @IsMongoId()
   @IsNotEmpty()
   paymentMethodId: string;
 
