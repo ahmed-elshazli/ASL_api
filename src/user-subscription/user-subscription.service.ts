@@ -186,14 +186,32 @@ export class SubscriptionService {
       .lean();
 
     if (!subscription) {
-      const anyDocsForUser = await this.subscriptionModel.countDocuments({
+      const countForUser = await this.subscriptionModel.countDocuments({
         user: userId.toString(),
       });
-      const totalDocs = await this.subscriptionModel.estimatedDocumentCount();
-      console.warn(
-        `[getCurrentSubscription] no match for userId=${userId} (type=${typeof userId}) — countForUser=${anyDocsForUser}, totalSubscriptions=${totalDocs}`,
+      const mostRecentOverall: any = await this.subscriptionModel
+        .findOne()
+        .sort({ createdAt: -1 })
+        .select('user status createdAt')
+        .lean();
+
+      const debug = {
+        queriedUserId: userId?.toString?.() ?? String(userId),
+        queriedUserIdType: typeof userId,
+        countForUser,
+        mostRecentSubscription: mostRecentOverall
+          ? {
+              user: mostRecentOverall.user?.toString?.() ?? String(mostRecentOverall.user),
+              status: mostRecentOverall.status,
+              createdAt: mostRecentOverall.createdAt,
+            }
+          : null,
+      };
+
+      console.warn('[getCurrentSubscription] no match:', debug);
+      throw new NotFoundException(
+        `No active subscription found. DEBUG=${JSON.stringify(debug)}`,
       );
-      throw new NotFoundException('No active subscription found.');
     }
 
     const methodMap = await this.resolvePaymentMethods([subscription.paymentMethod]);
