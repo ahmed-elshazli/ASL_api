@@ -23,6 +23,12 @@ import { ApiFeatures } from 'src/common/utils/api-features';
 import { RejectSubscriptionDto } from './dto/reject-subscription.dto';
 import { CreateSubscriptionByDoctorDto } from './dto/create-subscription-by-doctor.dto';
 import { UploadService } from 'src/common/storage/upload.service';
+import {
+  PaymentMethod,
+  PaymentMethodDocument,
+} from 'src/payment-methods/schemas/payment-method.schema';
+
+const PAYMENT_METHOD_FIELDS = 'name type accountName accountNumber instructions';
 
 @Injectable()
 export class SubscriptionService {
@@ -33,8 +39,39 @@ export class SubscriptionService {
     @InjectModel(SubscriptionPlan.name)
     private readonly subscriptionPlanModel: Model<SubscriptionPlanDocument>,
 
+    @InjectModel(PaymentMethod.name)
+    private readonly paymentMethodModel: Model<PaymentMethodDocument>,
+
     private readonly uploadService: UploadService,
   ) {}
+
+  /**
+   * Resolves paymentMethod refs manually instead of via .populate(), because
+   * some legacy subscriptions have a non-ObjectId value in that field —
+   * letting Mongoose cast it during populate throws and fails the whole
+   * query. Invalid/unknown refs just resolve to null instead of crashing.
+   */
+  private async resolvePaymentMethods(
+    rawIds: unknown[],
+  ): Promise<Map<string, any>> {
+    const validIds = [
+      ...new Set(
+        rawIds
+          .filter((id): id is string | Types.ObjectId => !!id)
+          .map((id) => id.toString())
+          .filter((id) => Types.ObjectId.isValid(id)),
+      ),
+    ];
+
+    if (!validIds.length) return new Map();
+
+    const methods = await this.paymentMethodModel
+      .find({ _id: { $in: validIds } })
+      .select(PAYMENT_METHOD_FIELDS)
+      .lean();
+
+    return new Map(methods.map((m) => [m._id.toString(), m]));
+  }
 
   async createSubscription(dto: CreateSubscriptionDto, userId: string, file: Express.Multer.File,) {
     const plan = await this.subscriptionPlanModel.findById(dto.planId);
@@ -139,19 +176,23 @@ export class SubscriptionService {
   }
 
   async getCurrentSubscription(userId: string) {
-    const subscription = await this.subscriptionModel
+    const subscription: any = await this.subscriptionModel
       .findOne({
         user: userId.toString(),
       })
       .sort({ createdAt: -1 })
       .populate('plan')
-      .populate('paymentMethod', 'name type accountName accountNumber instructions')
       .populate('approvedBy', 'fullName role')
       .lean();
 
     if (!subscription) {
       throw new NotFoundException('No active subscription found.');
     }
+
+    const methodMap = await this.resolvePaymentMethods([subscription.paymentMethod]);
+    subscription.paymentMethod = subscription.paymentMethod
+      ? (methodMap.get(subscription.paymentMethod.toString()) ?? null)
+      : subscription.paymentMethod;
 
     return subscription;
   }
@@ -161,7 +202,6 @@ export class SubscriptionService {
       .find({ status: SubscriptionStatus.PENDING })
       .populate('user', 'fullName email phone')
       .populate('plan', 'name price durationInDays')
-      .populate('paymentMethod', 'name type accountName accountNumber instructions')
       .lean();
 
     const features = new ApiFeatures(baseQuery, query).filter();
@@ -170,16 +210,18 @@ export class SubscriptionService {
 
     features.sort().limitFields().paginate(total);
 
-    const data = await features.exec();
+    const data: any[] = await features.exec();
+
+    const methodMap = await this.resolvePaymentMethods(data.map((d) => d.paymentMethod));
+    data.forEach((d) => {
+      d.paymentMethod = d.paymentMethod ? (methodMap.get(d.paymentMethod.toString()) ?? null) : d.paymentMethod;
+    });
 
     return {
       results: data.length,
       pagination: features.paginationResult,
       data,
     };
-
-
-     
   }
 
   async getAllSubscriptions(query: BuildQueryDto) {
@@ -187,7 +229,6 @@ export class SubscriptionService {
       .find()
       .populate('user', 'fullName email phone')
       .populate('plan', 'name price durationInDays ')
-      .populate('paymentMethod', 'name type accountName accountNumber instructions')
       .populate('approvedBy', 'fullName role')
       .lean();
 
@@ -197,7 +238,12 @@ export class SubscriptionService {
 
     features.sort().limitFields().paginate(total);
 
-    const data = await features.exec();
+    const data: any[] = await features.exec();
+
+    const methodMap = await this.resolvePaymentMethods(data.map((d) => d.paymentMethod));
+    data.forEach((d) => {
+      d.paymentMethod = d.paymentMethod ? (methodMap.get(d.paymentMethod.toString()) ?? null) : d.paymentMethod;
+    });
 
     return {
       results: data.length,

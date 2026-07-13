@@ -11,6 +11,10 @@ import {
   SubscriptionPlan,
   SubscriptionPlanSchema,
 } from 'src/subscription-plan/schema/subscription-plan.schema';
+import {
+  PaymentMethod,
+  PaymentMethodSchema,
+} from 'src/payment-methods/schemas/payment-method.schema';
 import { SubscriptionCron } from './cron/subscription.cron';
 import { StorageModule } from 'src/common/storage/storage.module';
 
@@ -25,6 +29,10 @@ import { StorageModule } from 'src/common/storage/storage.module';
       {
         name: SubscriptionPlan.name,
         schema: SubscriptionPlanSchema,
+      },
+      {
+        name: PaymentMethod.name,
+        schema: PaymentMethodSchema,
       },
     ]),
 
