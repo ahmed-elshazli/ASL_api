@@ -124,7 +124,7 @@ export class SubscriptionService {
         'Only pending subscriptions can be rejected.',
       );
     }
-
+ 
     subscription.status = SubscriptionStatus.REJECTED;
     subscription.approvedBy = new Types.ObjectId(doctorId);
     subscription.reviewedAt = new Date();
@@ -137,8 +137,8 @@ export class SubscriptionService {
 
   async getCurrentSubscription(userId: string) {
     const subscription = await this.subscriptionModel
-      .findOne({
-        user: userId.toString(),
+      .find({
+        user: userId
       })
       .populate('plan')
       .populate('approvedBy', 'fullName role')
@@ -151,7 +151,7 @@ export class SubscriptionService {
     return subscription;
   }
 
-  async getPendingSubscriptions(query:BuildQueryDto) {
+  async getPendingSubscriptions(query:BuildQueryDto) { 
   const baseQuery = this.subscriptionModel
       .find({ status: SubscriptionStatus.PENDING })
       .populate('user', 'fullName email phone')
