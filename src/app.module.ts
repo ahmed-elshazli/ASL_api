@@ -10,8 +10,7 @@ import { UserModule } from './users/users.module';
 import { StorageModule } from './common/storage/storage.module';
 
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
-import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
-import { CacheInterceptor, CacheModule } from '@nestjs/cache-manager';
+import { APP_GUARD } from '@nestjs/core';
 import { PlansModule } from './plans/plans.module';
 import { ExercisesModule } from './exercises/exercises.module';
 import { TrainingProgramModule } from './training-program/training-program.module';
@@ -65,10 +64,6 @@ import { AdminDashboardModule } from './admin-dashboard/admin-dashboard.module';
       }),
     }),
 
-    CacheModule.register({
-      ttl: 60,
-      isGlobal: true,
-    }),
     BullModule.forRootAsync({
       inject: [ConfigService],
       useFactory: (config: ConfigService) => {
@@ -118,10 +113,6 @@ import { AdminDashboardModule } from './admin-dashboard/admin-dashboard.module';
     {
       provide: APP_GUARD,
       useClass: ThrottlerGuard,
-    },
-    {
-      provide: APP_INTERCEPTOR,
-      useClass: CacheInterceptor,
     },
   ],
 })

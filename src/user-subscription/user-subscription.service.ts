@@ -23,6 +23,12 @@ import { ApiFeatures } from 'src/common/utils/api-features';
 import { RejectSubscriptionDto } from './dto/reject-subscription.dto';
 import { CreateSubscriptionByDoctorDto } from './dto/create-subscription-by-doctor.dto';
 import { UploadService } from 'src/common/storage/upload.service';
+import {
+  PaymentMethod,
+  PaymentMethodDocument,
+} from 'src/payment-methods/schemas/payment-method.schema';
+
+const PAYMENT_METHOD_FIELDS = 'name type accountName accountNumber instructions';
 
 @Injectable()
 export class SubscriptionService {
@@ -33,8 +39,39 @@ export class SubscriptionService {
     @InjectModel(SubscriptionPlan.name)
     private readonly subscriptionPlanModel: Model<SubscriptionPlanDocument>,
 
+    @InjectModel(PaymentMethod.name)
+    private readonly paymentMethodModel: Model<PaymentMethodDocument>,
+
     private readonly uploadService: UploadService,
   ) {}
+
+  /**
+   * Resolves paymentMethod refs manually instead of via .populate(), because
+   * some legacy subscriptions have a non-ObjectId value in that field —
+   * letting Mongoose cast it during populate throws and fails the whole
+   * query. Invalid/unknown refs just resolve to null instead of crashing.
+   */
+  private async resolvePaymentMethods(
+    rawIds: unknown[],
+  ): Promise<Map<string, any>> {
+    const validIds = [
+      ...new Set(
+        rawIds
+          .filter((id): id is string | Types.ObjectId => !!id)
+          .map((id) => id.toString())
+          .filter((id) => Types.ObjectId.isValid(id)),
+      ),
+    ];
+
+    if (!validIds.length) return new Map();
+
+    const methods = await this.paymentMethodModel
+      .find({ _id: { $in: validIds } })
+      .select(PAYMENT_METHOD_FIELDS)
+      .lean();
+
+    return new Map(methods.map((m) => [m._id.toString(), m]));
+  }
 
   async createSubscription(dto: CreateSubscriptionDto, userId: string, file: Express.Multer.File,) {
     const plan = await this.subscriptionPlanModel.findById(dto.planId);
@@ -67,7 +104,10 @@ export class SubscriptionService {
       status: SubscriptionStatus.PENDING,
     });
 
-    return subscription.populate('plan');
+    return subscription.populate([
+      { path: 'plan' },
+      { path: 'paymentMethod', select: 'name type accountName accountNumber instructions' },
+    ]);
   }
 
   async createSubscriptionByDoctor(
@@ -140,13 +180,44 @@ export class SubscriptionService {
       .find({
         user: userId
       })
+      .sort({ createdAt: -1 })
       .populate('plan')
       .populate('approvedBy', 'fullName role')
       .lean();
 
     if (!subscription) {
-      throw new NotFoundException('No active subscription found.');
+      const countForUser = await this.subscriptionModel.countDocuments({
+        user: userId.toString(),
+      });
+      const mostRecentOverall: any = await this.subscriptionModel
+        .findOne()
+        .sort({ createdAt: -1 })
+        .select('user status createdAt')
+        .lean();
+
+      const debug = {
+        queriedUserId: userId?.toString?.() ?? String(userId),
+        queriedUserIdType: typeof userId,
+        countForUser,
+        mostRecentSubscription: mostRecentOverall
+          ? {
+              user: mostRecentOverall.user?.toString?.() ?? String(mostRecentOverall.user),
+              status: mostRecentOverall.status,
+              createdAt: mostRecentOverall.createdAt,
+            }
+          : null,
+      };
+
+      console.warn('[getCurrentSubscription] no match:', debug);
+      throw new NotFoundException(
+        `No active subscription found. DEBUG=${JSON.stringify(debug)}`,
+      );
     }
+
+    const methodMap = await this.resolvePaymentMethods([subscription.paymentMethod]);
+    subscription.paymentMethod = subscription.paymentMethod
+      ? (methodMap.get(subscription.paymentMethod.toString()) ?? null)
+      : subscription.paymentMethod;
 
     return subscription;
   }
@@ -164,16 +235,18 @@ export class SubscriptionService {
 
     features.sort().limitFields().paginate(total);
 
-    const data = await features.exec();
+    const data: any[] = await features.exec();
+
+    const methodMap = await this.resolvePaymentMethods(data.map((d) => d.paymentMethod));
+    data.forEach((d) => {
+      d.paymentMethod = d.paymentMethod ? (methodMap.get(d.paymentMethod.toString()) ?? null) : d.paymentMethod;
+    });
 
     return {
       results: data.length,
       pagination: features.paginationResult,
       data,
     };
-
-
-     
   }
 
   async getAllSubscriptions(query: BuildQueryDto) {
@@ -190,7 +263,12 @@ export class SubscriptionService {
 
     features.sort().limitFields().paginate(total);
 
-    const data = await features.exec();
+    const data: any[] = await features.exec();
+
+    const methodMap = await this.resolvePaymentMethods(data.map((d) => d.paymentMethod));
+    data.forEach((d) => {
+      d.paymentMethod = d.paymentMethod ? (methodMap.get(d.paymentMethod.toString()) ?? null) : d.paymentMethod;
+    });
 
     return {
       results: data.length,
@@ -210,6 +288,22 @@ export class SubscriptionService {
       throw new BadRequestException(
         'Only active subscriptions can be cancelled.',
       );
+    }
+
+    subscription.status = SubscriptionStatus.CANCELLED;
+    await subscription.save();
+
+    return subscription;
+  }
+
+  async cancelMySubscription(userId: string) {
+    const subscription = await this.subscriptionModel.findOne({
+      user: userId.toString(),
+      status: SubscriptionStatus.ACTIVE,
+    });
+
+    if (!subscription) {
+      throw new NotFoundException('No active subscription to cancel.');
     }
 
     subscription.status = SubscriptionStatus.CANCELLED;
